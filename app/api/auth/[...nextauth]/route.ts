@@ -21,51 +21,120 @@ export const authOptions: NextAuthOptions = {
       tenantId: process.env.MICROSOFT_TENANT_ID,
       authorization: {
         params: {
-          scope: "openid profile email User.Read Calendars.Read Place.Read.All",
+          scope:
+            "openid profile email User.Read Calendars.Read Place.Read.All offline_access",
         },
       },
     }),
   ],
   callbacks: {
     async jwt({ token, account, profile }) {
-      // Stocker seulement les informations essentielles
+      // Stocker les informations d'authentification de manière permanente
       if (account) {
-        // Stocker seulement le token d'accès (raccourci si possible)
+        // Stocker le token d'accès et le refresh token
         token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token;
+        token.expiresAt = account.expires_at;
 
-        // Stocker seulement l'ID utilisateur minimal
+        // Stocker les informations utilisateur
         if (profile) {
           const azureProfile = profile as AzureADProfile;
           token.userId = azureProfile.oid || azureProfile.sub || "";
-          // Ne pas stocker l'email dans le token pour économiser l'espace
+          token.email = azureProfile.email;
+          token.name = azureProfile.name;
+        }
+
+        // Marquer le token comme permanent
+        token.isPermanent = true;
+        console.log("Session permanente établie pour:", token.email);
+      }
+
+      // Si c'est une session permanente, toujours essayer de rafraîchir le token si nécessaire
+      if (token.isPermanent && token.refreshToken) {
+        // Vérifier si le token d'accès a expiré ou va expirer dans les 5 prochaines minutes
+        const shouldRefresh =
+          !token.expiresAt ||
+          Date.now() > (token.expiresAt as number) * 1000 - 5 * 60 * 1000;
+
+        if (shouldRefresh) {
+          try {
+            console.log("Rafraîchissement préventif du token d'accès...");
+
+            const response = await fetch(
+              "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: new URLSearchParams({
+                  client_id: process.env.MICROSOFT_CLIENT_ID!,
+                  client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+                  grant_type: "refresh_token",
+                  refresh_token: token.refreshToken as string,
+                  scope:
+                    "openid profile email User.Read Calendars.Read Place.Read.All offline_access",
+                }),
+              }
+            );
+
+            if (response.ok) {
+              const refreshedTokens = await response.json();
+              console.log("Token rafraîchi avec succès - session maintenue");
+
+              return {
+                ...token,
+                accessToken: refreshedTokens.access_token,
+                refreshToken:
+                  refreshedTokens.refresh_token ?? token.refreshToken,
+                expiresAt: Math.floor(
+                  Date.now() / 1000 + refreshedTokens.expires_in
+                ),
+                isPermanent: true, // Maintenir le statut permanent
+              };
+            } else {
+              console.warn(
+                "Échec du rafraîchissement, mais session maintenue:",
+                response.status
+              );
+              // Même en cas d'échec, on garde la session active
+            }
+          } catch (error) {
+            console.warn(
+              "Erreur lors du rafraîchissement, mais session maintenue:",
+              error
+            );
+            // Même en cas d'erreur, on garde la session active
+          }
         }
       }
+
+      // Toujours retourner le token pour maintenir la session
       return token;
     },
     async session({ session, token }: any) {
-      // Transmettre seulement le token d'accès
+      // Toujours transmettre les informations de session
       session.accessToken = token.accessToken;
+      session.refreshToken = token.refreshToken;
+      session.isPermanent = token.isPermanent;
 
-      // Minimiser les informations utilisateur
+      // Ajouter les informations utilisateur
       if (session.user) {
         session.user.id = token.userId;
-        // Supprimer les propriétés non essentielles
-        delete session.user.image;
-        // Garder seulement le nom, pas l'email pour économiser l'espace
-        if (session.user.email && session.user.email.length > 50) {
-          delete session.user.email;
-        }
+        session.user.email = token.email;
+        session.user.name = token.name;
       }
 
       return session;
     },
   },
-  // Réduire drastiquement la durée de vie des cookies
+  // Configuration de session pour ne jamais expirer
   session: {
     strategy: "jwt",
-    maxAge: 60 * 15, // 15 minutes au lieu de 30
+    maxAge: 365 * 24 * 60 * 60, // 1 an (maximum possible)
+    updateAge: 0, // Ne jamais forcer la mise à jour
   },
-  // Optimiser les cookies pour réduire leur taille
+  // Configuration des cookies pour une durée de vie maximale
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
@@ -74,17 +143,16 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 15, // 15 minutes
+        maxAge: 365 * 24 * 60 * 60, // 1 an
       },
     },
-    // Supprimer les cookies non essentiels
     callbackUrl: {
       name: `next-auth.callback-url`,
       options: {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 15,
+        maxAge: 365 * 24 * 60 * 60, // 1 an
       },
     },
     csrfToken: {
@@ -94,12 +162,30 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 15,
+        maxAge: 365 * 24 * 60 * 60, // 1 an
       },
     },
   },
-  // Réduire le niveau de débogage en production
-  debug: process.env.NODE_ENV === "development",
+  // Désactiver le débogage en production pour éviter les logs excessifs
+  debug: false,
+  // Pages personnalisées
+  pages: {
+    signIn: "/auth/signin",
+    error: "/auth/error",
+  },
+  // Événements pour surveiller la session
+  events: {
+    async signIn({ user, account, profile }) {
+      console.log(`Session permanente créée pour: ${user.email}`);
+    },
+    async session({ session, token }) {
+      // Log périodique pour confirmer que la session est active
+      if (Math.random() < 0.01) {
+        // 1% de chance de logger pour éviter le spam
+        console.log(`Session permanente active pour: ${session.user?.email}`);
+      }
+    },
+  },
 };
 
 const handler = NextAuth(authOptions);

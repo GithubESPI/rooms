@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { LogIn, Monitor } from "lucide-react";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -36,7 +36,7 @@ export function Header() {
   // Effet pour démarrer le compte à rebours après l'authentification
   useEffect(() => {
     if (status === "authenticated" && !kioskCountdown) {
-      setKioskCountdown(1000);
+      setKioskCountdown(10);
     } else if (status !== "authenticated") {
       setKioskCountdown(null);
       if (timerRef.current) {
@@ -113,16 +113,17 @@ export function Header() {
                   </Link>
                 </Button>
                 <div className="text-sm">
-                  Connecté en tant que{" "}
-                  <span className="font-medium">{session?.user?.name}</span>
+                  <span className="text-green-600 dark:text-green-400 font-medium">
+                    ●
+                  </span>{" "}
+                  Connecté en permanence
+                  {session?.user?.name && (
+                    <span className="ml-2 font-medium">
+                      {session.user.name}
+                    </span>
+                  )}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                >
-                  Déconnexion
-                </Button>
+                {/* Suppression du bouton de déconnexion pour maintenir la session permanente */}
               </div>
             ) : (
               <Button onClick={() => signIn("azure-ad")} size="sm">
