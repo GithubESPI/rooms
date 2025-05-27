@@ -39,6 +39,8 @@ export function AvatarEnhanced({
       setLoading(true);
       setHasAttempted(true);
 
+      console.log(`🖼️ Tentative de chargement de la photo pour: ${email}`);
+
       // Ajouter un délai pour éviter trop de requêtes simultanées
       const delay = Math.random() * 1000 + 500; // Entre 500ms et 1.5s
 
@@ -49,26 +51,26 @@ export function AvatarEnhanced({
               return response.blob().then((blob) => {
                 const url = URL.createObjectURL(blob);
                 setPhotoUrl(url);
-                console.log(`Photo chargée pour ${email}`);
+                console.log(`✅ Photo chargée pour ${email}`);
               });
             } else if (response.status === 404) {
-              console.log(`Aucune photo disponible pour ${email}`);
+              console.log(`📭 Aucune photo disponible pour ${email}`);
               setImageError(true);
             } else if (response.status === 403) {
               console.log(
-                `Accès refusé pour la photo de ${email} - permissions insuffisantes`
+                `🔒 Accès refusé pour la photo de ${email} - permissions insuffisantes`
               );
               setImageError(true);
             } else {
               console.log(
-                `Erreur ${response.status} pour la photo de ${email}`
+                `⚠️ Erreur ${response.status} pour la photo de ${email}`
               );
               setImageError(true);
             }
           })
           .catch((error) => {
             console.log(
-              `Erreur réseau lors du chargement de la photo pour ${email}:`,
+              `💥 Erreur réseau lors du chargement de la photo pour ${email}:`,
               error.message
             );
             setImageError(true);
@@ -151,7 +153,7 @@ export function AvatarEnhanced({
           className
         )}
         onError={() => {
-          console.log(`Erreur de chargement d'image pour ${name || email}`);
+          console.log(`💥 Erreur de chargement d'image pour ${name || email}`);
           setImageError(true);
           // Nettoyer l'URL blob en cas d'erreur
           if (photoUrl.startsWith("blob:")) {
@@ -159,7 +161,7 @@ export function AvatarEnhanced({
           }
         }}
         onLoad={() => {
-          console.log(`Image chargée avec succès pour ${name || email}`);
+          console.log(`✅ Image chargée avec succès pour ${name || email}`);
         }}
       />
     );

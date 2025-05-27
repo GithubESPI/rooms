@@ -178,7 +178,7 @@ export function MeetingRoomCard({ room, index }: MeetingRoomCardProps) {
                 <span>{room.location}</span>
                 <span>•</span>
                 <UsersIcon className="h-4 w-4" />
-                <span>{room.capacity} personnes</span>
+                <span>{room.capacity} personnes (capacité max)</span>
               </CardDescription>
             </div>
 

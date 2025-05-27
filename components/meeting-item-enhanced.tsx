@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Clock, Users } from "lucide-react";
+import { Clock } from "lucide-react";
 import type { Meeting } from "@/lib/types";
 import {
   formatFrenchTime,
@@ -106,11 +106,6 @@ export function MeetingItemEnhanced({
                 {formatFrenchTime(meeting.startTime)} -{" "}
                 {formatFrenchTime(meeting.endTime)}
               </span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Users className="h-3 w-3" />
-              <span>{meeting.attendeeCount}</span>
             </div>
           </div>
         </div>

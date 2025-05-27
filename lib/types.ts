@@ -27,7 +27,7 @@ export interface Meeting {
   endTime: string;
   organizer: string;
   organizerDetails?: Organizer;
-  attendeeCount: number;
+  attendeeCount?: number;
   attendees?: Attendee[];
   roomId: string;
   description?: string;

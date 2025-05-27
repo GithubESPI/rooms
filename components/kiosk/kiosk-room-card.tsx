@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import type { MeetingRoom, Meeting } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { AvatarEnhanced } from "@/components/ui/avatar-enhanced";
-import { ParticipantsList } from "./participants-list";
 import { AnimatedProgress } from "./animated-progress";
 import {
   getCurrentFrenchTime,
@@ -267,16 +266,6 @@ export function KioskRoomCard({
                   endTime={currentMeeting.endTime}
                   fullscreen={fullscreen}
                 />
-
-                {/* Liste des participants réels uniquement */}
-                {currentMeeting.attendees &&
-                  currentMeeting.attendees.length > 0 && (
-                    <ParticipantsList
-                      attendees={currentMeeting.attendees}
-                      maxVisible={fullscreen ? 8 : 4}
-                      fullscreen={fullscreen}
-                    />
-                  )}
               </motion.div>
             ) : nextMeeting ? (
               <motion.div
