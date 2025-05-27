@@ -40,7 +40,7 @@ export function MeetingsSection({ meetings, loading }: MeetingsSectionProps) {
       <div className="space-y-2">
         {[...Array(3)].map((_, i) => (
           <motion.div
-            key={i}
+            key={`loading-${i}`}
             className="h-20 bg-muted/50 rounded-lg animate-pulse"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -71,6 +71,7 @@ export function MeetingsSection({ meetings, loading }: MeetingsSectionProps) {
         {/* Réunions en cours */}
         {currentMeetings.length > 0 && (
           <motion.div
+            key="current-meetings-section"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -82,7 +83,7 @@ export function MeetingsSection({ meetings, loading }: MeetingsSectionProps) {
             </div>
             {currentMeetings.map((meeting, index) => (
               <MeetingItemEnhanced
-                key={meeting.id}
+                key={`current-${meeting.id}`}
                 meeting={meeting}
                 index={index}
               />
@@ -93,6 +94,7 @@ export function MeetingsSection({ meetings, loading }: MeetingsSectionProps) {
         {/* Réunions à venir */}
         {sortedUpcoming.length > 0 && (
           <motion.div
+            key="upcoming-meetings-section"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -107,7 +109,7 @@ export function MeetingsSection({ meetings, loading }: MeetingsSectionProps) {
             </div>
             {sortedUpcoming.map((meeting, index) => (
               <MeetingItemEnhanced
-                key={meeting.id}
+                key={`upcoming-${meeting.id}`}
                 meeting={meeting}
                 index={index + currentMeetings.length}
               />
@@ -118,6 +120,7 @@ export function MeetingsSection({ meetings, loading }: MeetingsSectionProps) {
         {/* Réunions passées - Amélioration de la visibilité */}
         {sortedPast.length > 0 && (
           <motion.div
+            key="past-meetings-section"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -144,7 +147,7 @@ export function MeetingsSection({ meetings, loading }: MeetingsSectionProps) {
             <div className="space-y-2">
               {sortedPast.map((meeting, index) => (
                 <MeetingItemEnhanced
-                  key={meeting.id}
+                  key={`past-${meeting.id}`}
                   meeting={meeting}
                   index={index + currentMeetings.length + sortedUpcoming.length}
                 />

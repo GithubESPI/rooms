@@ -47,6 +47,12 @@ export function KioskView({ initialRooms }: KioskViewProps) {
   const modeChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const roomChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Ajouter après les autres useState
+  const [occupiedRoomInterval, setOccupiedRoomInterval] = useState(10); // 10 secondes pour les salles occupées
+  const [availableRoomInterval, setAvailableRoomInterval] = useState(15); // 15 secondes pour les salles libres
+  const [modeChangeInterval, setModeChangeInterval] = useState(45); // 45 secondes pour changer de mode
+  const [autoRotate, setAutoRotate] = useState(true);
+
   // Supprimer l'activation automatique du plein écran au chargement
   // useEffect(() => {
   //   const timer = setTimeout(() => {
@@ -197,8 +203,10 @@ export function KioskView({ initialRooms }: KioskViewProps) {
     }
   }, []);
 
-  // Gérer l'alternance entre salles occupées et libres
+  // Remplacer la section useEffect pour l'alternance entre modes
   useEffect(() => {
+    if (!autoRotate) return;
+
     // Nettoyer les timeouts existants
     if (modeChangeTimeoutRef.current) {
       clearTimeout(modeChangeTimeoutRef.current);
@@ -210,17 +218,19 @@ export function KioskView({ initialRooms }: KioskViewProps) {
         prev === "occupied" ? "available" : "occupied"
       );
       setCurrentRoomIndex(0); // Réinitialiser l'index lors du changement de mode
-    }, 30000); // 30 secondes
+    }, modeChangeInterval * 1000); // Utiliser l'intervalle configuré
 
     return () => {
       if (modeChangeTimeoutRef.current) {
         clearTimeout(modeChangeTimeoutRef.current);
       }
     };
-  }, [displayMode]);
+  }, [displayMode, modeChangeInterval, autoRotate]);
 
-  // Gérer la rotation entre les salles du même type (occupées ou libres)
+  // Remplacer la section useEffect pour la rotation entre salles
   useEffect(() => {
+    if (!autoRotate) return;
+
     const currentModeRooms = roomsWithStatus.filter((room) =>
       displayMode === "occupied" ? room.isOccupied : !room.isOccupied
     );
@@ -232,17 +242,30 @@ export function KioskView({ initialRooms }: KioskViewProps) {
       clearTimeout(roomChangeTimeoutRef.current);
     }
 
+    // Utiliser l'intervalle approprié selon le mode
+    const interval =
+      displayMode === "occupied"
+        ? occupiedRoomInterval * 1000
+        : availableRoomInterval * 1000;
+
     // Définir un nouveau timeout pour changer de salle
     roomChangeTimeoutRef.current = setTimeout(() => {
       setCurrentRoomIndex((prev) => (prev + 1) % currentModeRooms.length);
-    }, 10000); // 10 secondes par salle
+    }, interval);
 
     return () => {
       if (roomChangeTimeoutRef.current) {
         clearTimeout(roomChangeTimeoutRef.current);
       }
     };
-  }, [displayMode, roomsWithStatus, currentRoomIndex]);
+  }, [
+    displayMode,
+    roomsWithStatus,
+    currentRoomIndex,
+    occupiedRoomInterval,
+    availableRoomInterval,
+    autoRotate,
+  ]);
 
   // Rafraîchir les données toutes les 2 minutes
   useEffect(() => {
@@ -336,10 +359,23 @@ export function KioskView({ initialRooms }: KioskViewProps) {
             <KioskControls
               isFullscreen={isFullscreen}
               toggleFullscreen={toggleFullscreen}
-              autoRotate={true}
-              setAutoRotate={() => {}}
-              rotationInterval={30}
-              setRotationInterval={() => {}}
+              autoRotate={autoRotate}
+              setAutoRotate={setAutoRotate}
+              rotationInterval={
+                displayMode === "occupied"
+                  ? occupiedRoomInterval
+                  : availableRoomInterval
+              }
+              setRotationInterval={() => {}} // Pas utilisé maintenant
+              occupiedRoomInterval={occupiedRoomInterval}
+              setOccupiedRoomInterval={setOccupiedRoomInterval}
+              availableRoomInterval={availableRoomInterval}
+              setAvailableRoomInterval={setAvailableRoomInterval}
+              modeChangeInterval={modeChangeInterval}
+              setModeChangeInterval={setModeChangeInterval}
+              currentDisplayMode={displayMode}
+              occupiedRoomsCount={occupiedRooms.length}
+              availableRoomsCount={availableRooms.length}
               currentPage={0}
               totalPages={1}
               nextPage={() => {}}
