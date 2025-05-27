@@ -135,10 +135,13 @@ export async function GET(
             endTime = new Date(event.end).toISOString();
           }
 
+          // Informations de l'organisateur avec plus de détails
           const organizerDetails = event.organizer?.emailAddress
             ? {
                 name:
-                  event.organizer.emailAddress.name || "Organisateur inconnu",
+                  event.organizer.emailAddress.name ||
+                  event.organizer.emailAddress.address?.split("@")[0] ||
+                  "Organisateur inconnu",
                 email: event.organizer.emailAddress.address || "",
                 photo: undefined, // Sera récupérée par le composant AvatarEnhanced
               }
@@ -154,8 +157,7 @@ export async function GET(
             subject: event.subject || "Réunion sans titre",
             startTime,
             endTime,
-            organizer:
-              event.organizer?.emailAddress?.name || "Organisateur inconnu",
+            organizer: organizerDetails?.name || "Organisateur inconnu",
             organizerDetails,
             attendeeCount: 0,
             roomId,
@@ -250,6 +252,7 @@ export async function GET(
                 ? {
                     name:
                       event.organizer.emailAddress.name ||
+                      event.organizer.emailAddress.address?.split("@")[0] ||
                       "Organisateur inconnu",
                     email: event.organizer.emailAddress.address || "",
                     photo: undefined,
@@ -261,8 +264,7 @@ export async function GET(
                 subject: event.subject || "Réunion sans titre",
                 startTime,
                 endTime,
-                organizer:
-                  event.organizer?.emailAddress?.name || "Organisateur inconnu",
+                organizer: organizerDetails?.name || "Organisateur inconnu",
                 organizerDetails,
                 attendeeCount: 0,
                 roomId,

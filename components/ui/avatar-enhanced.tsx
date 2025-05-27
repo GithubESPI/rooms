@@ -39,45 +39,52 @@ export function AvatarEnhanced({
       setLoading(true);
       setHasAttempted(true);
 
-      console.log(`🖼️ Tentative de chargement de la photo pour: ${email}`);
+      console.log(`🖼️ [AvatarEnhanced] Chargement photo pour: ${email}`);
 
-      // Ajouter un délai pour éviter trop de requêtes simultanées
-      const delay = Math.random() * 1000 + 500; // Entre 500ms et 1.5s
+      // Délai aléatoire pour éviter trop de requêtes simultanées
+      const delay = Math.random() * 500 + 200;
 
-      const timeoutId = setTimeout(() => {
-        fetch(`/api/user-photo/${encodeURIComponent(email)}`)
-          .then((response) => {
-            if (response.ok) {
-              return response.blob().then((blob) => {
-                const url = URL.createObjectURL(blob);
-                setPhotoUrl(url);
-                console.log(`✅ Photo chargée pour ${email}`);
-              });
-            } else if (response.status === 404) {
-              console.log(`📭 Aucune photo disponible pour ${email}`);
-              setImageError(true);
-            } else if (response.status === 403) {
+      const timeoutId = setTimeout(async () => {
+        try {
+          const response = await fetch(
+            `/api/user-photo/${encodeURIComponent(email)}`,
+            {
+              method: "GET",
+              headers: {
+                Accept: "image/*",
+              },
+              // Timeout côté client aussi
+              signal: AbortSignal.timeout(8000),
+            }
+          );
+
+          if (response.ok) {
+            const blob = await response.blob();
+            if (blob.size > 0) {
+              const url = URL.createObjectURL(blob);
+              setPhotoUrl(url);
               console.log(
-                `🔒 Accès refusé pour la photo de ${email} - permissions insuffisantes`
+                `✅ [AvatarEnhanced] Photo chargée pour ${email}: ${blob.size} bytes`
               );
-              setImageError(true);
             } else {
-              console.log(
-                `⚠️ Erreur ${response.status} pour la photo de ${email}`
-              );
+              console.log(`⚠️ [AvatarEnhanced] Blob vide pour ${email}`);
               setImageError(true);
             }
-          })
-          .catch((error) => {
+          } else {
             console.log(
-              `💥 Erreur réseau lors du chargement de la photo pour ${email}:`,
-              error.message
+              `❌ [AvatarEnhanced] Erreur ${response.status} pour ${email}`
             );
             setImageError(true);
-          })
-          .finally(() => {
-            setLoading(false);
-          });
+          }
+        } catch (error) {
+          console.log(
+            `💥 [AvatarEnhanced] Erreur réseau pour ${email}:`,
+            error instanceof Error ? error.message : "Unknown error"
+          );
+          setImageError(true);
+        } finally {
+          setLoading(false);
+        }
       }, delay);
 
       return () => {
@@ -152,8 +159,12 @@ export function AvatarEnhanced({
           sizeClasses[size],
           className
         )}
-        onError={() => {
-          console.log(`💥 Erreur de chargement d'image pour ${name || email}`);
+        onError={(e) => {
+          console.log(
+            `💥 [AvatarEnhanced] Erreur de chargement d'image pour ${
+              name || email
+            }`
+          );
           setImageError(true);
           // Nettoyer l'URL blob en cas d'erreur
           if (photoUrl.startsWith("blob:")) {
@@ -161,7 +172,11 @@ export function AvatarEnhanced({
           }
         }}
         onLoad={() => {
-          console.log(`✅ Image chargée avec succès pour ${name || email}`);
+          console.log(
+            `✅ [AvatarEnhanced] Image affichée avec succès pour ${
+              name || email
+            }`
+          );
         }}
       />
     );

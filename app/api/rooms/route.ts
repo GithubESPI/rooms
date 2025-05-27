@@ -9,8 +9,12 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
+    // Si pas de session, retourner des données simulées pour la page d'accueil
     if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      console.log(
+        "Accès sans authentification - retour de données simulées pour la page d'accueil"
+      );
+      return NextResponse.json(generateMockRoomsForWelcome());
     }
 
     console.log(
@@ -159,6 +163,40 @@ export async function GET() {
       { status: 500 }
     );
   }
+}
+
+// Fonction pour générer des données simulées spécifiques à la page d'accueil
+function generateMockRoomsForWelcome(): MeetingRoom[] {
+  return [
+    {
+      id: "cronstadt-box-droite",
+      name: "Cronstadt-Box-droite",
+      location: "Bâtiment Cronstadt - Étage 1",
+      capacity: 4,
+      features: ["Écran", "Visioconférence"],
+    },
+    {
+      id: "cronstadt-box-gauche",
+      name: "Cronstadt-Box-gauche",
+      location: "Bâtiment Cronstadt - Étage 1",
+      capacity: 4,
+      features: ["Écran", "Tableau blanc"],
+    },
+    {
+      id: "cronstadt-salle-reunion-bas-mtr",
+      name: "Cronstadt-Salle-de-reunion-bas-MTR",
+      location: "Bâtiment Cronstadt - Rez-de-chaussée",
+      capacity: 8,
+      features: ["Microsoft Teams Room", "Écran", "Visioconférence"],
+    },
+    {
+      id: "cronstadt-salle-reunion-haut",
+      name: "Cronstadt-Salle-de-reunion-Haut",
+      location: "Bâtiment Cronstadt - Étage 2",
+      capacity: 6,
+      features: ["Projecteur", "Tableau blanc"],
+    },
+  ];
 }
 
 // Fonction pour générer des données simulées
