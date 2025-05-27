@@ -202,8 +202,8 @@ export function MeetingRoomDashboard() {
         </Alert>
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredRooms.map((room) => (
-            <MeetingRoomCard key={room.id} room={room} />
+          {filteredRooms.map((room, index) => (
+            <MeetingRoomCard key={room.id} room={room} index={index} />
           ))}
         </div>
       )}
