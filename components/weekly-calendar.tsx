@@ -20,6 +20,11 @@ import { cn } from "@/lib/utils";
 import { fetchMeetings } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Meeting, MeetingRoom } from "@/lib/types";
+import {
+  convertUTCToFrenchTime,
+  getCurrentFrenchTime,
+  formatFrenchTime,
+} from "@/lib/date-utils";
 
 interface WeeklyCalendarProps {
   room: MeetingRoom;
@@ -86,8 +91,8 @@ export function WeeklyCalendar({ room }: WeeklyCalendarProps) {
     hourEnd.setHours(hour + 1, 0, 0, 0);
 
     return meetings.find((meeting) => {
-      const meetingStart = new Date(meeting.startTime);
-      const meetingEnd = new Date(meeting.endTime);
+      const meetingStart = convertUTCToFrenchTime(meeting.startTime);
+      const meetingEnd = convertUTCToFrenchTime(meeting.endTime);
 
       // Vérifier si la réunion chevauche cette heure
       return (
@@ -148,7 +153,8 @@ export function WeeklyCalendar({ room }: WeeklyCalendarProps) {
                   key={day.toString()}
                   className={cn(
                     "text-center font-medium py-2",
-                    isSameDay(day, new Date()) && "bg-primary/10 rounded-t-md"
+                    isSameDay(day, getCurrentFrenchTime()) &&
+                      "bg-primary/10 rounded-t-md"
                   )}
                 >
                   <div>{format(day, "EEE", { locale: fr })}</div>
@@ -170,7 +176,8 @@ export function WeeklyCalendar({ room }: WeeklyCalendarProps) {
                         key={`${day}-${hour}`}
                         className={cn(
                           "border border-border min-h-[60px] p-1 transition-colors duration-200",
-                          isSameDay(day, new Date()) && "bg-primary/5",
+                          isSameDay(day, getCurrentFrenchTime()) &&
+                            "bg-primary/5",
                           meeting && "bg-primary/20 hover:bg-primary/30"
                         )}
                       >
@@ -180,8 +187,8 @@ export function WeeklyCalendar({ room }: WeeklyCalendarProps) {
                               {meeting.subject}
                             </div>
                             <div className="text-muted-foreground">
-                              {format(new Date(meeting.startTime), "HH:mm")} -{" "}
-                              {format(new Date(meeting.endTime), "HH:mm")}
+                              {formatFrenchTime(meeting.startTime)} -{" "}
+                              {formatFrenchTime(meeting.endTime)}
                             </div>
                             <div className="text-muted-foreground truncate">
                               {meeting.organizer}

@@ -19,12 +19,20 @@ import { cn } from "@/lib/utils";
 import type { MeetingRoom, Meeting } from "@/lib/types";
 import Link from "next/link";
 import { CalendarIcon } from "lucide-react";
+import {
+  isMeetingActive,
+  calculateMeetingProgress,
+  getTimeUntilEnd,
+  getTimeUntilStart,
+  isToday,
+  formatFrenchTime,
+  debugTimeAnalysis, // Remplacer debugTimeConversion par debugTimeAnalysis
+} from "@/lib/date-utils";
 
 interface MeetingRoomCardProps {
   room: MeetingRoom;
 }
 
-// Modifier la fonction MeetingRoomCard pour améliorer l'affichage des réunions
 export function MeetingRoomCard({ room }: MeetingRoomCardProps) {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +55,15 @@ export function MeetingRoomCard({ room }: MeetingRoomCardProps) {
           `${data.length} réunions récupérées pour ${room.name}:`,
           data
         );
+
+        // Debug: afficher les heures pour la première réunion
+        if (data.length > 0) {
+          console.log("=== DEBUG PREMIÈRE RÉUNION ===");
+          console.log("Réunion:", data[0].subject);
+          debugTimeAnalysis(data[0].startTime, "START");
+          debugTimeAnalysis(data[0].endTime, "END");
+        }
+
         setMeetings(data);
         setLastUpdated(new Date());
       } catch (err) {
@@ -70,7 +87,7 @@ export function MeetingRoomCard({ room }: MeetingRoomCardProps) {
     const updateCurrentStatus = () => {
       const now = new Date();
 
-      // Trier les réunions par heure de début
+      // Trier les réunions par heure de début UTC (pas besoin de convertir pour le tri)
       const sortedMeetings = [...meetings].sort((a, b) => {
         return (
           new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
@@ -78,33 +95,39 @@ export function MeetingRoomCard({ room }: MeetingRoomCardProps) {
       });
 
       // Trouver la réunion en cours
-      const current = sortedMeetings.find((meeting) => {
-        const start = new Date(meeting.startTime);
-        const end = new Date(meeting.endTime);
-        return start <= now && end >= now;
-      });
+      const current = sortedMeetings.find((meeting) =>
+        isMeetingActive(meeting.startTime, meeting.endTime)
+      );
 
       setCurrentMeeting(current || null);
 
       // Trouver la prochaine réunion
       const next = sortedMeetings.find((meeting) => {
-        const start = new Date(meeting.startTime);
-        return start > now;
+        const startUTC = new Date(meeting.startTime);
+        return startUTC > now;
       });
 
       setNextMeeting(next || null);
 
       // Calculer le pourcentage d'occupation pour la réunion en cours
       if (current) {
-        const start = new Date(current.startTime);
-        const end = new Date(current.endTime);
-        const totalDuration = end.getTime() - start.getTime();
-        const elapsedDuration = now.getTime() - start.getTime();
-        const percentage = Math.min(
-          100,
-          Math.max(0, (elapsedDuration / totalDuration) * 100)
+        const percentage = calculateMeetingProgress(
+          current.startTime,
+          current.endTime
         );
         setOccupancyPercentage(percentage);
+
+        // Debug pour la réunion en cours
+        console.log("=== RÉUNION EN COURS ===");
+        console.log("Sujet:", current.subject);
+        console.log("Heure UTC début:", current.startTime);
+        console.log("Heure UTC fin:", current.endTime);
+        console.log(
+          "Heure française début:",
+          formatFrenchTime(current.startTime)
+        );
+        console.log("Heure française fin:", formatFrenchTime(current.endTime));
+        console.log("Progression:", percentage + "%");
       } else {
         setOccupancyPercentage(0);
       }
@@ -117,17 +140,11 @@ export function MeetingRoomCard({ room }: MeetingRoomCardProps) {
   }, [meetings]);
 
   const isOccupied = currentMeeting !== null;
-  const todayMeetings = meetings.filter((meeting) => {
-    const meetingDate = new Date(meeting.startTime);
-    const today = new Date();
-    return (
-      meetingDate.getDate() === today.getDate() &&
-      meetingDate.getMonth() === today.getMonth() &&
-      meetingDate.getFullYear() === today.getFullYear()
-    );
-  });
+  const todayMeetings = meetings.filter((meeting) =>
+    isToday(meeting.startTime)
+  );
 
-  // Trier les réunions par heure de début
+  // Trier les réunions par heure de début UTC
   const sortedTodayMeetings = [...todayMeetings].sort((a, b) => {
     return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
   });
@@ -158,15 +175,12 @@ export function MeetingRoomCard({ room }: MeetingRoomCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {isOccupied && (
+        {isOccupied && currentMeeting && (
           <div className="mb-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="font-medium">{currentMeeting.subject}</span>
               <span className="text-muted-foreground">
-                {new Date(currentMeeting.endTime).toLocaleTimeString("fr-FR", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                {formatFrenchTime(currentMeeting.endTime)}
               </span>
             </div>
             <Progress
@@ -174,8 +188,7 @@ export function MeetingRoomCard({ room }: MeetingRoomCardProps) {
               className="h-2 transition-all duration-300"
             />
             <div className="text-xs text-muted-foreground text-right">
-              Temps restant:{" "}
-              {formatRemainingTime(new Date(currentMeeting.endTime))}
+              Temps restant: {getTimeUntilEnd(currentMeeting.endTime)}
             </div>
           </div>
         )}
@@ -185,15 +198,12 @@ export function MeetingRoomCard({ room }: MeetingRoomCardProps) {
             <div className="flex justify-between text-sm">
               <span className="font-medium">Prochaine réunion:</span>
               <span className="text-muted-foreground">
-                {new Date(nextMeeting.startTime).toLocaleTimeString("fr-FR", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                {formatFrenchTime(nextMeeting.startTime)}
               </span>
             </div>
             <div className="text-sm">{nextMeeting.subject}</div>
             <div className="text-xs text-muted-foreground">
-              Dans {formatTimeUntil(new Date(nextMeeting.startTime))}
+              Dans {getTimeUntilStart(nextMeeting.startTime)}
             </div>
           </div>
         )}
@@ -242,48 +252,4 @@ export function MeetingRoomCard({ room }: MeetingRoomCardProps) {
       </CardContent>
     </Card>
   );
-}
-
-// Fonction pour formater le temps restant
-function formatRemainingTime(endTime: Date): string {
-  const now = new Date();
-  const diff = endTime.getTime() - now.getTime();
-
-  if (diff <= 0) {
-    return "Terminé";
-  }
-
-  const minutes = Math.floor(diff / 60000);
-  const seconds = Math.floor((diff % 60000) / 1000);
-
-  if (minutes > 0) {
-    return `${minutes} min ${seconds} s`;
-  } else {
-    return `${seconds} s`;
-  }
-}
-
-// Fonction pour formater le temps jusqu'à la prochaine réunion
-function formatTimeUntil(startTime: Date): string {
-  const now = new Date();
-  const diff = startTime.getTime() - now.getTime();
-
-  if (diff <= 0) {
-    return "Maintenant";
-  }
-
-  const minutes = Math.floor(diff / 60000);
-
-  if (minutes < 60) {
-    return `${minutes} minute${minutes > 1 ? "s" : ""}`;
-  } else {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-
-    if (remainingMinutes === 0) {
-      return `${hours} heure${hours > 1 ? "s" : ""}`;
-    } else {
-      return `${hours}h${remainingMinutes.toString().padStart(2, "0")}`;
-    }
-  }
 }

@@ -4,12 +4,10 @@ import { authOptions } from "../../../auth/[...nextauth]/route";
 import { callMicrosoftGraph, isGraphError } from "@/lib/microsoft-graph";
 import type { Meeting } from "@/lib/types";
 
-// Remplacer tout le contenu de la fonction GET par cette implémentation corrigée
 export async function GET(
   request: Request,
   { params }: { params: { roomId: string } }
 ) {
-  // Assurez-vous que params est bien un objet et contient roomId
   if (!params || typeof params !== "object") {
     return NextResponse.json({ error: "Invalid params" }, { status: 400 });
   }
@@ -39,7 +37,7 @@ export async function GET(
       59
     );
 
-    // Formater les dates pour l'API
+    // Formater les dates pour l'API - IMPORTANT: utiliser le fuseau horaire français
     const startDateTime = startOfDay.toISOString();
     const endDateTime = endOfDay.toISOString();
 
@@ -56,7 +54,8 @@ export async function GET(
 
     // Utiliser l'endpoint correct pour récupérer les réunions d'une salle
     try {
-      const calendarViewUrl = `/users/${roomEmail}/calendar/calendarView?startDateTime=${startDateTime}&endDateTime=${endDateTime}`;
+      // Essayer d'abord avec le paramètre de fuseau horaire
+      const calendarViewUrl = `/users/${roomEmail}/calendar/calendarView?startDateTime=${startDateTime}&endDateTime=${endDateTime}&$select=id,subject,start,end,organizer,attendees`;
       console.log(`Appel à l'API: ${calendarViewUrl}`);
 
       const calendarResponse = await callMicrosoftGraph<{ value: any[] }>(
@@ -78,23 +77,88 @@ export async function GET(
           `${calendarResponse.value.length} réunions trouvées pour la salle ${roomEmail}`
         );
 
+        // DEBUG: Afficher les données brutes de Microsoft Graph
+        console.log("=== DONNÉES BRUTES MICROSOFT GRAPH ===");
+        calendarResponse.value.forEach((event, index) => {
+          console.log(`Événement ${index + 1}:`);
+          console.log("  Sujet:", event.subject);
+          console.log("  Début brut:", event.start);
+          console.log("  Fin brute:", event.end);
+          console.log("  Début dateTime:", event.start?.dateTime);
+          console.log("  Début timeZone:", event.start?.timeZone);
+          console.log("  Fin dateTime:", event.end?.dateTime);
+          console.log("  Fin timeZone:", event.end?.timeZone);
+        });
+        console.log("=====================================");
+
         // Transformer les données pour correspondre à notre format
-        const meetings: Meeting[] = calendarResponse.value.map((event) => ({
-          id: event.id,
-          subject: event.subject || "Réunion sans titre",
-          startTime: event.start.dateTime,
-          endTime: event.end.dateTime,
-          organizer:
-            event.organizer?.emailAddress?.name || "Organisateur inconnu",
-          attendeeCount: event.attendees?.length || 0,
-          roomId,
-        }));
+        const meetings: Meeting[] = calendarResponse.value.map((event) => {
+          // Gérer les différents formats de date que Microsoft Graph peut retourner
+          let startTime: string;
+          let endTime: string;
+
+          if (event.start?.dateTime) {
+            // Si Microsoft Graph retourne un objet avec dateTime et timeZone
+            if (event.start.timeZone && event.start.timeZone !== "UTC") {
+              // Si le fuseau horaire n'est pas UTC, on doit convertir
+              console.log(`Fuseau horaire détecté: ${event.start.timeZone}`);
+
+              // Créer une date en tenant compte du fuseau horaire
+              const startDate = new Date(event.start.dateTime);
+              const endDate = new Date(event.end.dateTime);
+
+              // Si le fuseau horaire est déjà français, pas besoin de conversion
+              if (
+                event.start.timeZone.includes("Paris") ||
+                event.start.timeZone.includes("Europe")
+              ) {
+                startTime = startDate.toISOString();
+                endTime = endDate.toISOString();
+              } else {
+                // Sinon, traiter comme UTC
+                startTime = event.start.dateTime.endsWith("Z")
+                  ? event.start.dateTime
+                  : event.start.dateTime + "Z";
+                endTime = event.end.dateTime.endsWith("Z")
+                  ? event.end.dateTime
+                  : event.end.dateTime + "Z";
+              }
+            } else {
+              // Traiter comme UTC si pas de fuseau horaire spécifié
+              startTime = event.start.dateTime.endsWith("Z")
+                ? event.start.dateTime
+                : event.start.dateTime + "Z";
+              endTime = event.end.dateTime.endsWith("Z")
+                ? event.end.dateTime
+                : event.end.dateTime + "Z";
+            }
+          } else {
+            // Format de date simple
+            startTime = new Date(event.start).toISOString();
+            endTime = new Date(event.end).toISOString();
+          }
+
+          console.log(`Conversion pour ${event.subject}:`);
+          console.log(`  Original: ${event.start?.dateTime || event.start}`);
+          console.log(`  Converti: ${startTime}`);
+
+          return {
+            id: event.id,
+            subject: event.subject || "Réunion sans titre",
+            startTime,
+            endTime,
+            organizer:
+              event.organizer?.emailAddress?.name || "Organisateur inconnu",
+            attendeeCount: event.attendees?.length || 0,
+            roomId,
+          };
+        });
 
         return NextResponse.json(meetings);
       }
 
       console.log(`Aucune réunion trouvée pour la salle ${roomEmail}`);
-      return NextResponse.json([]); // Retourner un tableau vide plutôt que des données simulées
+      return NextResponse.json([]);
     } catch (error) {
       console.error(
         `Erreur lors de la récupération des réunions pour la salle ${roomId}:`,
@@ -103,13 +167,12 @@ export async function GET(
 
       // En cas d'erreur, essayer une approche alternative
       try {
-        // Essayer de récupérer les événements via l'API me/events et filtrer par salle
         console.log(
           "Tentative de récupération des événements via me/events..."
         );
 
         const eventsResponse = await callMicrosoftGraph<{ value: any[] }>(
-          `/me/events?$filter=start/dateTime ge '${startDateTime}' and end/dateTime le '${endDateTime}'&$top=100`
+          `/me/events?$filter=start/dateTime ge '${startDateTime}' and end/dateTime le '${endDateTime}'&$top=100&$select=id,subject,start,end,organizer,attendees,location`
         );
 
         if (isGraphError(eventsResponse)) {
@@ -125,7 +188,6 @@ export async function GET(
         if (eventsResponse.value && eventsResponse.value.length > 0) {
           // Filtrer les événements qui concernent cette salle
           const roomEvents = eventsResponse.value.filter((event) => {
-            // Vérifier si la salle est dans les participants ou dans le lieu
             const isInAttendees = event.attendees?.some(
               (attendee: any) =>
                 attendee.emailAddress?.address?.toLowerCase() ===
@@ -148,30 +210,56 @@ export async function GET(
           );
 
           if (roomEvents.length > 0) {
-            // Transformer les données pour correspondre à notre format
-            const meetings: Meeting[] = roomEvents.map((event) => ({
-              id: event.id,
-              subject: event.subject || "Réunion sans titre",
-              startTime: event.start.dateTime,
-              endTime: event.end.dateTime,
-              organizer:
-                event.organizer?.emailAddress?.name || "Organisateur inconnu",
-              attendeeCount: event.attendees?.length || 0,
-              roomId,
-            }));
+            // DEBUG: Afficher les données brutes
+            console.log("=== DONNÉES BRUTES ME/EVENTS ===");
+            roomEvents.forEach((event, index) => {
+              console.log(`Événement ${index + 1}:`);
+              console.log("  Sujet:", event.subject);
+              console.log("  Début brut:", event.start);
+              console.log("  Fin brute:", event.end);
+            });
+            console.log("===============================");
+
+            const meetings: Meeting[] = roomEvents.map((event) => {
+              let startTime: string;
+              let endTime: string;
+
+              if (event.start?.dateTime) {
+                startTime = event.start.dateTime.endsWith("Z")
+                  ? event.start.dateTime
+                  : event.start.dateTime + "Z";
+                endTime = event.end.dateTime.endsWith("Z")
+                  ? event.end.dateTime
+                  : event.end.dateTime + "Z";
+              } else {
+                startTime = new Date(event.start).toISOString();
+                endTime = new Date(event.end).toISOString();
+              }
+
+              return {
+                id: event.id,
+                subject: event.subject || "Réunion sans titre",
+                startTime,
+                endTime,
+                organizer:
+                  event.organizer?.emailAddress?.name || "Organisateur inconnu",
+                attendeeCount: event.attendees?.length || 0,
+                roomId,
+              };
+            });
 
             return NextResponse.json(meetings);
           }
         }
 
         console.log(`Aucun événement trouvé pour la salle ${roomEmail}`);
-        return NextResponse.json([]); // Retourner un tableau vide plutôt que des données simulées
+        return NextResponse.json([]);
       } catch (alternativeError) {
         console.error(
           "Erreur lors de l'approche alternative:",
           alternativeError
         );
-        return NextResponse.json([]); // Retourner un tableau vide plutôt que des données simulées
+        return NextResponse.json([]);
       }
     }
   } catch (error) {

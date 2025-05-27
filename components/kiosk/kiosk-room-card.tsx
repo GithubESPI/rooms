@@ -2,12 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { fetchMeetings } from "@/lib/api";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { Clock, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MeetingRoom, Meeting } from "@/lib/types";
 import { motion } from "framer-motion";
+import {
+  getCurrentFrenchTime,
+  convertUTCToFrenchTime,
+  isMeetingActive,
+  calculateMeetingProgress,
+  getTimeUntilEnd,
+  getTimeUntilStart,
+  formatFrenchTime,
+} from "@/lib/date-utils";
 
 interface KioskRoomCardProps {
   room: MeetingRoom;
@@ -48,27 +55,25 @@ export function KioskRoomCard({
 
   useEffect(() => {
     const updateCurrentStatus = () => {
-      const now = new Date();
+      const now = getCurrentFrenchTime();
 
-      // Trier les réunions par heure de début
+      // Trier les réunions par heure de début (en heure française)
       const sortedMeetings = [...meetings].sort((a, b) => {
-        return (
-          new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-        );
+        const startA = convertUTCToFrenchTime(a.startTime);
+        const startB = convertUTCToFrenchTime(b.startTime);
+        return startA.getTime() - startB.getTime();
       });
 
       // Trouver la réunion en cours
-      const current = sortedMeetings.find((meeting) => {
-        const start = new Date(meeting.startTime);
-        const end = new Date(meeting.endTime);
-        return start <= now && end >= now;
-      });
+      const current = sortedMeetings.find((meeting) =>
+        isMeetingActive(meeting.startTime, meeting.endTime)
+      );
 
       setCurrentMeeting(current || null);
 
       // Trouver la prochaine réunion
       const next = sortedMeetings.find((meeting) => {
-        const start = new Date(meeting.startTime);
+        const start = convertUTCToFrenchTime(meeting.startTime);
         return start > now;
       });
 
@@ -76,13 +81,9 @@ export function KioskRoomCard({
 
       // Calculer le pourcentage d'occupation pour la réunion en cours
       if (current) {
-        const start = new Date(current.startTime);
-        const end = new Date(current.endTime);
-        const totalDuration = end.getTime() - start.getTime();
-        const elapsedDuration = now.getTime() - start.getTime();
-        const percentage = Math.min(
-          100,
-          Math.max(0, (elapsedDuration / totalDuration) * 100)
+        const percentage = calculateMeetingProgress(
+          current.startTime,
+          current.endTime
         );
         setOccupancyPercentage(percentage);
       } else {
@@ -154,20 +155,15 @@ export function KioskRoomCard({
       </div>
 
       <div className="flex-1 flex flex-col justify-center">
-        {isOccupied ? (
+        {isOccupied && currentMeeting ? (
           <div className="space-y-4">
             <div className={meetingTitleClasses}>{currentMeeting.subject}</div>
 
             <div className={meetingInfoClasses}>
               <Clock className={fullscreen ? "h-8 w-8" : "h-6 w-6"} />
               <span>
-                {format(new Date(currentMeeting.startTime), "HH:mm", {
-                  locale: fr,
-                })}{" "}
-                -
-                {format(new Date(currentMeeting.endTime), "HH:mm", {
-                  locale: fr,
-                })}
+                {formatFrenchTime(currentMeeting.startTime)} -{" "}
+                {formatFrenchTime(currentMeeting.endTime)}
               </span>
             </div>
 
@@ -210,8 +206,7 @@ export function KioskRoomCard({
                       : "text-xl text-right mt-2"
                   }
                 >
-                  Fin dans{" "}
-                  {formatRemainingTime(new Date(currentMeeting.endTime))}
+                  Fin dans {getTimeUntilEnd(currentMeeting.endTime)}
                 </div>
               </div>
             </div>
@@ -226,11 +221,8 @@ export function KioskRoomCard({
             <div className={meetingInfoClasses}>
               <Clock className={fullscreen ? "h-8 w-8" : "h-6 w-6"} />
               <span>
-                {format(new Date(nextMeeting.startTime), "HH:mm", {
-                  locale: fr,
-                })}{" "}
-                -
-                {format(new Date(nextMeeting.endTime), "HH:mm", { locale: fr })}
+                {formatFrenchTime(nextMeeting.startTime)} -{" "}
+                {formatFrenchTime(nextMeeting.endTime)}
               </span>
             </div>
 
@@ -239,7 +231,7 @@ export function KioskRoomCard({
             </div>
 
             <div className={fullscreen ? "text-4xl mt-8" : "text-2xl mt-4"}>
-              Début dans {formatTimeUntil(new Date(nextMeeting.startTime))}
+              Début dans {getTimeUntilStart(nextMeeting.startTime)}
             </div>
           </div>
         ) : (
@@ -254,54 +246,4 @@ export function KioskRoomCard({
       </div>
     </motion.div>
   );
-}
-
-// Fonction pour formater le temps restant
-function formatRemainingTime(endTime: Date): string {
-  const now = new Date();
-  const diff = endTime.getTime() - now.getTime();
-
-  if (diff <= 0) {
-    return "Terminé";
-  }
-
-  const minutes = Math.floor(diff / 60000);
-
-  if (minutes < 60) {
-    return `${minutes} min`;
-  } else {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-
-    if (remainingMinutes === 0) {
-      return `${hours}h`;
-    } else {
-      return `${hours}h${remainingMinutes.toString().padStart(2, "0")}`;
-    }
-  }
-}
-
-// Fonction pour formater le temps jusqu'à la prochaine réunion
-function formatTimeUntil(startTime: Date): string {
-  const now = new Date();
-  const diff = startTime.getTime() - now.getTime();
-
-  if (diff <= 0) {
-    return "Maintenant";
-  }
-
-  const minutes = Math.floor(diff / 60000);
-
-  if (minutes < 60) {
-    return `${minutes} min`;
-  } else {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-
-    if (remainingMinutes === 0) {
-      return `${hours}h`;
-    } else {
-      return `${hours}h${remainingMinutes.toString().padStart(2, "0")}`;
-    }
-  }
 }
