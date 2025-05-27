@@ -21,7 +21,7 @@ export const signOut = async (options?: {
   console.log("Déconnexion manuelle initiée");
 
   try {
-    // Effectuer la déconnexion
+    // Marquer la session pour déconnexion via update
     await nextAuthSignOut({
       callbackUrl: options?.callbackUrl || "/auth/signin",
       redirect: options?.redirect !== false,

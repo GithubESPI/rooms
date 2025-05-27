@@ -29,21 +29,15 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, account, profile, trigger }) {
-      // Gérer la déconnexion manuelle
-      if (trigger === "signOut") {
-        console.log("Déconnexion manuelle demandée pour:", token.email);
-        // Marquer le token comme expiré pour forcer la déconnexion
-        token.isManualSignOut = true;
-        return token;
-      }
-
-      // Si c'est une déconnexion manuelle, ne pas rafraîchir le token
+      // Si c'est une déconnexion manuelle marquée, ne pas rafraîchir le token
       if (token.isManualSignOut) {
         return token;
       }
 
       // Stocker les informations d'authentification de manière permanente
       if (account) {
+        console.log("Nouvelle connexion - stockage des tokens");
+
         // Stocker le token d'accès et le refresh token
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
@@ -55,6 +49,12 @@ export const authOptions: NextAuthOptions = {
           token.userId = azureProfile.oid || azureProfile.sub || "";
           token.email = azureProfile.email;
           token.name = azureProfile.name;
+
+          console.log("Profil utilisateur:", {
+            userId: token.userId,
+            email: token.email,
+            name: token.name,
+          });
         }
 
         // Marquer le token comme permanent
@@ -148,6 +148,21 @@ export const authOptions: NextAuthOptions = {
 
       return session;
     },
+    async signIn({ user, account, profile, email, credentials }) {
+      console.log("Tentative de connexion:", {
+        user: user?.email,
+        provider: account?.provider,
+        type: account?.type,
+      });
+
+      // Vérifier que nous avons les informations nécessaires
+      if (!account?.access_token) {
+        console.error("Pas de token d'accès reçu");
+        return false;
+      }
+
+      return true;
+    },
   },
   // Configuration de session pour ne jamais expirer automatiquement
   session: {
@@ -187,8 +202,8 @@ export const authOptions: NextAuthOptions = {
       },
     },
   },
-  // Désactiver le débogage en production pour éviter les logs excessifs
-  debug: false,
+  // Activer le débogage pour diagnostiquer le problème
+  debug: process.env.NODE_ENV === "development",
   // Pages personnalisées
   pages: {
     signIn: "/auth/signin",
@@ -200,7 +215,7 @@ export const authOptions: NextAuthOptions = {
       console.log(`Session permanente créée pour: ${user.email}`);
     },
     async signOut({ token }) {
-      console.log(`Déconnexion manuelle effectuée pour: ${token?.email}`);
+      console.log(`Déconnexion effectuée pour: ${token?.email}`);
     },
     async session({ session, token }) {
       // Log périodique pour confirmer que la session est active
