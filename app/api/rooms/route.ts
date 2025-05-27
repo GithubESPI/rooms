@@ -69,20 +69,26 @@ export async function GET() {
           `${placesResponse.value.length} salles trouvées via l'API places`
         );
 
-        // Transformer les données pour correspondre à notre format
-        const rooms: MeetingRoom[] = placesResponse.value.map((room) => ({
-          id: room.emailAddress || room.id,
-          name: room.displayName,
-          location: room.address?.city || room.building || "Non spécifié",
-          capacity: room.capacity || 0,
-          features: [
-            ...(room.audioDeviceName ? ["Visioconférence"] : []),
-            ...(room.videoDeviceName ? ["Caméra"] : []),
-            ...(room.displayDevice ? ["Écran"] : []),
-            ...(room.isWheelChairAccessible ? ["Accessible PMR"] : []),
-          ],
-        }));
+        // Filtrer et transformer les données
+        const rooms: MeetingRoom[] = placesResponse.value
+          .filter((room) => {
+            // Filtrer les salles qui ont un nom valide
+            return room.displayName && room.displayName.trim().length > 0;
+          })
+          .map((room) => ({
+            id: room.emailAddress || room.id,
+            name: room.displayName,
+            location: room.address?.city || room.building || "Non spécifié",
+            capacity: room.capacity || 0,
+            features: [
+              ...(room.audioDeviceName ? ["Visioconférence"] : []),
+              ...(room.videoDeviceName ? ["Caméra"] : []),
+              ...(room.displayDevice ? ["Écran"] : []),
+              ...(room.isWheelChairAccessible ? ["Accessible PMR"] : []),
+            ],
+          }));
 
+        console.log(`${rooms.length} salles valides après filtrage`);
         return NextResponse.json(rooms);
       }
     } catch (placesError) {

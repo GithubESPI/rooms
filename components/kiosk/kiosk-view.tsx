@@ -8,6 +8,7 @@ import { KioskControls } from "./kiosk-controls";
 import { fetchMeetingRooms, fetchMeetings } from "@/lib/api";
 import type { MeetingRoom, Meeting } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
+import { FullscreenPrompt } from "./fullscreen-prompt";
 
 // Liste des noms de salles à afficher
 const ALLOWED_ROOM_NAMES = [
@@ -46,22 +47,36 @@ export function KioskView({ initialRooms }: KioskViewProps) {
   const modeChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const roomChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Activer automatiquement le mode plein écran au chargement
+  // Supprimer l'activation automatique du plein écran au chargement
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     if (!document.fullscreenElement) {
+  //       document.documentElement.requestFullscreen().catch((err) => {
+  //         console.error(
+  //           `Erreur lors du passage en plein écran: ${err.message}`
+  //         );
+  //       });
+  //       setIsFullscreen(true);
+  //       // Masquer les contrôles après 3 secondes en plein écran
+  //       setTimeout(() => {
+  //         setShowControls(false);
+  //       }, 3000);
+  //     }
+  //   }, 1000); // Délai d'une seconde pour permettre le chargement complet
+
+  //   return () => clearTimeout(timer);
+  // }, []);
+
+  // Ajouter un message d'information pour le plein écran
   useEffect(() => {
+    // Afficher un message pour informer l'utilisateur
     const timer = setTimeout(() => {
       if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch((err) => {
-          console.error(
-            `Erreur lors du passage en plein écran: ${err.message}`
-          );
-        });
-        setIsFullscreen(true);
-        // Masquer les contrôles après 3 secondes en plein écran
-        setTimeout(() => {
-          setShowControls(false);
-        }, 3000);
+        console.log(
+          "Pour une meilleure expérience, cliquez sur le bouton plein écran"
+        );
       }
-    }, 1000); // Délai d'une seconde pour permettre le chargement complet
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -149,22 +164,35 @@ export function KioskView({ initialRooms }: KioskViewProps) {
   // Fonction pour activer/désactiver le mode plein écran
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch((err) => {
-        console.error(`Erreur lors du passage en plein écran: ${err.message}`);
-      });
-      setIsFullscreen(true);
-      // Masquer les contrôles après 3 secondes
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false);
-      }, 3000);
+      document.documentElement
+        .requestFullscreen()
+        .then(() => {
+          setIsFullscreen(true);
+          // Masquer les contrôles après 3 secondes
+          if (controlsTimeoutRef.current) {
+            clearTimeout(controlsTimeoutRef.current);
+          }
+          controlsTimeoutRef.current = setTimeout(() => {
+            setShowControls(false);
+          }, 3000);
+        })
+        .catch((err) => {
+          console.warn(`Plein écran non disponible: ${err.message}`);
+          // Ne pas afficher d'erreur à l'utilisateur, juste un avertissement dans la console
+        });
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-        setShowControls(true);
+        document
+          .exitFullscreen()
+          .then(() => {
+            setIsFullscreen(false);
+            setShowControls(true);
+          })
+          .catch((err) => {
+            console.warn(
+              `Erreur lors de la sortie du plein écran: ${err.message}`
+            );
+          });
       }
     }
   }, []);
@@ -322,6 +350,7 @@ export function KioskView({ initialRooms }: KioskViewProps) {
           </motion.div>
         )}
       </motion.div>
+      <FullscreenPrompt onRequestFullscreen={toggleFullscreen} />
     </div>
   );
 }

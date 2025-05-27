@@ -28,47 +28,44 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, account, profile }) {
-      // Ne stocker que les informations essentielles dans le token
+      // Stocker seulement les informations essentielles
       if (account) {
-        // Stocker uniquement le token d'accès
+        // Stocker seulement le token d'accès (raccourci si possible)
         token.accessToken = account.access_token;
 
-        // Stocker uniquement les informations essentielles du profil
+        // Stocker seulement l'ID utilisateur minimal
         if (profile) {
-          // Utiliser une assertion de type pour accéder aux propriétés spécifiques d'Azure AD
           const azureProfile = profile as AzureADProfile;
-
-          // Utiliser une approche sûre avec des opérateurs optionnels
           token.userId = azureProfile.oid || azureProfile.sub || "";
-          token.email = azureProfile.email || "";
+          // Ne pas stocker l'email dans le token pour économiser l'espace
         }
       }
       return token;
     },
     async session({ session, token }: any) {
-      // Ne transmettre que les informations essentielles à la session client
+      // Transmettre seulement le token d'accès
       session.accessToken = token.accessToken;
 
-      // S'assurer que les informations utilisateur sont minimales
+      // Minimiser les informations utilisateur
       if (session.user) {
         session.user.id = token.userId;
-        // Ne pas écraser l'email s'il existe déjà
-        if (token.email) {
-          session.user.email = token.email;
-        }
-        // Conserver uniquement le nom et l'email, supprimer les autres propriétés
+        // Supprimer les propriétés non essentielles
         delete session.user.image;
+        // Garder seulement le nom, pas l'email pour économiser l'espace
+        if (session.user.email && session.user.email.length > 50) {
+          delete session.user.email;
+        }
       }
 
       return session;
     },
   },
-  // Utiliser une stratégie de session basée sur JWT avec une durée de vie courte
+  // Réduire drastiquement la durée de vie des cookies
   session: {
     strategy: "jwt",
-    maxAge: 60 * 30, // 30 minutes
+    maxAge: 60 * 15, // 15 minutes au lieu de 30
   },
-  // Configurer les cookies pour réduire leur taille
+  // Optimiser les cookies pour réduire leur taille
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
@@ -77,7 +74,27 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 30, // 30 minutes
+        maxAge: 60 * 15, // 15 minutes
+      },
+    },
+    // Supprimer les cookies non essentiels
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 15,
+      },
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 15,
       },
     },
   },

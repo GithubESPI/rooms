@@ -37,66 +37,9 @@ export function KioskRoomCard({
         setLoading(true);
         const data = await fetchMeetings(room.id);
 
-        // Simuler des données d'organisateur et de participants pour la démo
-        const enhancedData = data.map((meeting) => ({
-          ...meeting,
-          organizerDetails: {
-            name: meeting.organizer,
-            email: `${meeting.organizer
-              .toLowerCase()
-              .replace(/\s+/g, ".")}@groupe-espi.fr`,
-            photo: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-              meeting.organizer
-            )}&background=random`,
-          },
-          attendees: [
-            {
-              name: meeting.organizer,
-              email: `${meeting.organizer
-                .toLowerCase()
-                .replace(/\s+/g, ".")}@groupe-espi.fr`,
-              status: "accepted" as const,
-              type: "required" as const,
-              photo: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                meeting.organizer
-              )}&background=random`,
-            },
-            {
-              name: "Marie Dubois",
-              email: "marie.dubois@groupe-espi.fr",
-              status: "accepted" as const,
-              type: "required" as const,
-              photo:
-                "https://ui-avatars.com/api/?name=Marie+Dubois&background=random",
-            },
-            {
-              name: "Pierre Martin",
-              email: "pierre.martin@groupe-espi.fr",
-              status: "accepted" as const,
-              type: "optional" as const,
-              photo:
-                "https://ui-avatars.com/api/?name=Pierre+Martin&background=random",
-            },
-            {
-              name: "Sophie Laurent",
-              email: "sophie.laurent@groupe-espi.fr",
-              status: "tentative" as const,
-              type: "required" as const,
-              photo:
-                "https://ui-avatars.com/api/?name=Sophie+Laurent&background=random",
-            },
-            {
-              name: "Thomas Rousseau",
-              email: "thomas.rousseau@groupe-espi.fr",
-              status: "accepted" as const,
-              type: "required" as const,
-              photo:
-                "https://ui-avatars.com/api/?name=Thomas+Rousseau&background=random",
-            },
-          ],
-        }));
-
-        setMeetings(enhancedData);
+        // Utiliser les données réelles sans modification
+        console.log(`Réunions récupérées pour ${room.name}:`, data);
+        setMeetings(data);
       } catch (err) {
         console.error(
           `Erreur lors du chargement des réunions pour ${room.name}:`,
@@ -285,7 +228,7 @@ export function KioskRoomCard({
                     </span>
                   </div>
 
-                  {/* Organisateur */}
+                  {/* Organisateur avec vraie photo ou initiales */}
                   {currentMeeting.organizerDetails && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
@@ -325,7 +268,7 @@ export function KioskRoomCard({
                   fullscreen={fullscreen}
                 />
 
-                {/* Liste des participants */}
+                {/* Liste des participants réels uniquement */}
                 {currentMeeting.attendees &&
                   currentMeeting.attendees.length > 0 && (
                     <ParticipantsList

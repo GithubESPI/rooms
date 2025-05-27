@@ -54,7 +54,7 @@ export async function GET(
 
     // Utiliser l'endpoint correct pour récupérer les réunions d'une salle
     try {
-      // Essayer d'abord avec le paramètre de fuseau horaire
+      // Essayer d'abord avec le calendrier de la salle - SANS $expand
       const calendarViewUrl = `/users/${roomEmail}/calendar/calendarView?startDateTime=${startDateTime}&endDateTime=${endDateTime}&$select=id,subject,start,end,organizer,attendees`;
       console.log(`Appel à l'API: ${calendarViewUrl}`);
 
@@ -82,12 +82,10 @@ export async function GET(
         calendarResponse.value.forEach((event, index) => {
           console.log(`Événement ${index + 1}:`);
           console.log("  Sujet:", event.subject);
+          console.log("  Organisateur:", event.organizer);
+          console.log("  Participants:", event.attendees);
           console.log("  Début brut:", event.start);
           console.log("  Fin brute:", event.end);
-          console.log("  Début dateTime:", event.start?.dateTime);
-          console.log("  Début timeZone:", event.start?.timeZone);
-          console.log("  Fin dateTime:", event.end?.dateTime);
-          console.log("  Fin timeZone:", event.end?.timeZone);
         });
         console.log("=====================================");
 
@@ -138,9 +136,65 @@ export async function GET(
             endTime = new Date(event.end).toISOString();
           }
 
+          // Traiter les participants réels
+          const realAttendees = event.attendees
+            ? event.attendees
+                .filter((attendee: any) => {
+                  // Exclure les salles de réunion et ne garder que les vraies personnes
+                  const email =
+                    attendee.emailAddress?.address?.toLowerCase() || "";
+                  const isResource = attendee.type === "resource";
+                  const isRoom =
+                    email.includes("room") ||
+                    email.includes("salle") ||
+                    email.includes("mtr");
+                  const isSameAsRoomEmail = email === roomEmail.toLowerCase();
+
+                  console.log(
+                    `Participant: ${attendee.emailAddress?.name} (${email})`
+                  );
+                  console.log(`  - Type: ${attendee.type}`);
+                  console.log(`  - Est une ressource: ${isResource}`);
+                  console.log(`  - Est une salle: ${isRoom}`);
+                  console.log(
+                    `  - Est la salle actuelle: ${isSameAsRoomEmail}`
+                  );
+                  console.log(`  - Statut: ${attendee.status?.response}`);
+
+                  // Garder seulement les vraies personnes
+                  return (
+                    !isResource &&
+                    !isRoom &&
+                    !isSameAsRoomEmail &&
+                    email.length > 0
+                  );
+                })
+                .map((attendee: any) => ({
+                  name: attendee.emailAddress?.name || "Participant inconnu",
+                  email: attendee.emailAddress?.address || "",
+                  status: attendee.status?.response || "none",
+                  type: attendee.type || "required",
+                  // Ne pas générer de photo fictive, laisser undefined pour utiliser les initiales
+                  photo: undefined,
+                }))
+            : [];
+
+          // Informations de l'organisateur
+          const organizerDetails = event.organizer?.emailAddress
+            ? {
+                name:
+                  event.organizer.emailAddress.name || "Organisateur inconnu",
+                email: event.organizer.emailAddress.address || "",
+                // Ne pas générer de photo fictive, laisser undefined pour utiliser les initiales
+                photo: undefined,
+              }
+            : undefined;
+
           console.log(`Conversion pour ${event.subject}:`);
           console.log(`  Original: ${event.start?.dateTime || event.start}`);
           console.log(`  Converti: ${startTime}`);
+          console.log(`  Participants réels: ${realAttendees.length}`);
+          console.log(`  Organisateur:`, organizerDetails);
 
           return {
             id: event.id,
@@ -149,7 +203,9 @@ export async function GET(
             endTime,
             organizer:
               event.organizer?.emailAddress?.name || "Organisateur inconnu",
-            attendeeCount: event.attendees?.length || 0,
+            organizerDetails,
+            attendeeCount: realAttendees.length,
+            attendees: realAttendees,
             roomId,
           };
         });
@@ -171,6 +227,7 @@ export async function GET(
           "Tentative de récupération des événements via me/events..."
         );
 
+        // SANS $expand=attendees car ce n'est pas supporté
         const eventsResponse = await callMicrosoftGraph<{ value: any[] }>(
           `/me/events?$filter=start/dateTime ge '${startDateTime}' and end/dateTime le '${endDateTime}'&$top=100&$select=id,subject,start,end,organizer,attendees,location`
         );
@@ -215,6 +272,8 @@ export async function GET(
             roomEvents.forEach((event, index) => {
               console.log(`Événement ${index + 1}:`);
               console.log("  Sujet:", event.subject);
+              console.log("  Organisateur:", event.organizer);
+              console.log("  Participants:", event.attendees);
               console.log("  Début brut:", event.start);
               console.log("  Fin brute:", event.end);
             });
@@ -236,6 +295,61 @@ export async function GET(
                 endTime = new Date(event.end).toISOString();
               }
 
+              // Traiter les participants réels
+              const realAttendees = event.attendees
+                ? event.attendees
+                    .filter((attendee: any) => {
+                      // Exclure les salles de réunion et ne garder que les vraies personnes
+                      const email =
+                        attendee.emailAddress?.address?.toLowerCase() || "";
+                      const isResource = attendee.type === "resource";
+                      const isRoom =
+                        email.includes("room") ||
+                        email.includes("salle") ||
+                        email.includes("mtr");
+                      const isSameAsRoomEmail =
+                        email === roomEmail.toLowerCase();
+
+                      console.log(
+                        `Participant (me/events): ${attendee.emailAddress?.name} (${email})`
+                      );
+                      console.log(`  - Type: ${attendee.type}`);
+                      console.log(`  - Est une ressource: ${isResource}`);
+                      console.log(`  - Est une salle: ${isRoom}`);
+                      console.log(
+                        `  - Est la salle actuelle: ${isSameAsRoomEmail}`
+                      );
+                      console.log(`  - Statut: ${attendee.status?.response}`);
+
+                      // Garder seulement les vraies personnes
+                      return (
+                        !isResource &&
+                        !isRoom &&
+                        !isSameAsRoomEmail &&
+                        email.length > 0
+                      );
+                    })
+                    .map((attendee: any) => ({
+                      name:
+                        attendee.emailAddress?.name || "Participant inconnu",
+                      email: attendee.emailAddress?.address || "",
+                      status: attendee.status?.response || "none",
+                      type: attendee.type || "required",
+                      photo: undefined,
+                    }))
+                : [];
+
+              // Informations de l'organisateur
+              const organizerDetails = event.organizer?.emailAddress
+                ? {
+                    name:
+                      event.organizer.emailAddress.name ||
+                      "Organisateur inconnu",
+                    email: event.organizer.emailAddress.address || "",
+                    photo: undefined,
+                  }
+                : undefined;
+
               return {
                 id: event.id,
                 subject: event.subject || "Réunion sans titre",
@@ -243,7 +357,9 @@ export async function GET(
                 endTime,
                 organizer:
                   event.organizer?.emailAddress?.name || "Organisateur inconnu",
-                attendeeCount: event.attendees?.length || 0,
+                organizerDetails,
+                attendeeCount: realAttendees.length,
+                attendees: realAttendees,
                 roomId,
               };
             });
