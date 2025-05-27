@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { fetchMeetings } from "@/lib/api";
-import { Clock, Users } from "lucide-react";
+import { Clock, MapPin, Calendar, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MeetingRoom, Meeting } from "@/lib/types";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { AvatarEnhanced } from "@/components/ui/avatar-enhanced";
+import { ParticipantsList } from "./participants-list";
+import { AnimatedProgress } from "./animated-progress";
 import {
   getCurrentFrenchTime,
   convertUTCToFrenchTime,
   isMeetingActive,
-  calculateMeetingProgress,
-  getTimeUntilEnd,
   getTimeUntilStart,
   formatFrenchTime,
 } from "@/lib/date-utils";
@@ -29,14 +30,73 @@ export function KioskRoomCard({
   const [loading, setLoading] = useState(true);
   const [currentMeeting, setCurrentMeeting] = useState<Meeting | null>(null);
   const [nextMeeting, setNextMeeting] = useState<Meeting | null>(null);
-  const [occupancyPercentage, setOccupancyPercentage] = useState(0);
 
   useEffect(() => {
     const loadMeetings = async () => {
       try {
         setLoading(true);
         const data = await fetchMeetings(room.id);
-        setMeetings(data);
+
+        // Simuler des données d'organisateur et de participants pour la démo
+        const enhancedData = data.map((meeting) => ({
+          ...meeting,
+          organizerDetails: {
+            name: meeting.organizer,
+            email: `${meeting.organizer
+              .toLowerCase()
+              .replace(/\s+/g, ".")}@groupe-espi.fr`,
+            photo: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+              meeting.organizer
+            )}&background=random`,
+          },
+          attendees: [
+            {
+              name: meeting.organizer,
+              email: `${meeting.organizer
+                .toLowerCase()
+                .replace(/\s+/g, ".")}@groupe-espi.fr`,
+              status: "accepted" as const,
+              type: "required" as const,
+              photo: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                meeting.organizer
+              )}&background=random`,
+            },
+            {
+              name: "Marie Dubois",
+              email: "marie.dubois@groupe-espi.fr",
+              status: "accepted" as const,
+              type: "required" as const,
+              photo:
+                "https://ui-avatars.com/api/?name=Marie+Dubois&background=random",
+            },
+            {
+              name: "Pierre Martin",
+              email: "pierre.martin@groupe-espi.fr",
+              status: "accepted" as const,
+              type: "optional" as const,
+              photo:
+                "https://ui-avatars.com/api/?name=Pierre+Martin&background=random",
+            },
+            {
+              name: "Sophie Laurent",
+              email: "sophie.laurent@groupe-espi.fr",
+              status: "tentative" as const,
+              type: "required" as const,
+              photo:
+                "https://ui-avatars.com/api/?name=Sophie+Laurent&background=random",
+            },
+            {
+              name: "Thomas Rousseau",
+              email: "thomas.rousseau@groupe-espi.fr",
+              status: "accepted" as const,
+              type: "required" as const,
+              photo:
+                "https://ui-avatars.com/api/?name=Thomas+Rousseau&background=random",
+            },
+          ],
+        }));
+
+        setMeetings(enhancedData);
       } catch (err) {
         console.error(
           `Erreur lors du chargement des réunions pour ${room.name}:`,
@@ -48,7 +108,6 @@ export function KioskRoomCard({
     };
 
     loadMeetings();
-    // Rafraîchir les réunions toutes les 2 minutes
     const interval = setInterval(loadMeetings, 2 * 60 * 1000);
     return () => clearInterval(interval);
   }, [room.id, room.name]);
@@ -57,192 +116,322 @@ export function KioskRoomCard({
     const updateCurrentStatus = () => {
       const now = getCurrentFrenchTime();
 
-      // Trier les réunions par heure de début (en heure française)
       const sortedMeetings = [...meetings].sort((a, b) => {
         const startA = convertUTCToFrenchTime(a.startTime);
         const startB = convertUTCToFrenchTime(b.startTime);
         return startA.getTime() - startB.getTime();
       });
 
-      // Trouver la réunion en cours
       const current = sortedMeetings.find((meeting) =>
         isMeetingActive(meeting.startTime, meeting.endTime)
       );
-
       setCurrentMeeting(current || null);
 
-      // Trouver la prochaine réunion
       const next = sortedMeetings.find((meeting) => {
         const start = convertUTCToFrenchTime(meeting.startTime);
         return start > now;
       });
-
       setNextMeeting(next || null);
-
-      // Calculer le pourcentage d'occupation pour la réunion en cours
-      if (current) {
-        const percentage = calculateMeetingProgress(
-          current.startTime,
-          current.endTime
-        );
-        setOccupancyPercentage(percentage);
-      } else {
-        setOccupancyPercentage(0);
-      }
     };
 
     updateCurrentStatus();
-    // Mettre à jour toutes les 10 secondes pour une expérience plus fluide
     const interval = setInterval(updateCurrentStatus, 10 * 1000);
     return () => clearInterval(interval);
   }, [meetings]);
 
   const isOccupied = currentMeeting !== null;
 
-  // Styles différents pour l'affichage en plein écran
   const containerClasses = cn(
-    "rounded-xl p-6 h-full flex flex-col",
+    "rounded-xl p-6 h-full flex flex-col relative overflow-hidden",
     isOccupied
-      ? "bg-red-900/30 border-2 border-red-700"
-      : "bg-green-900/30 border-2 border-green-700",
+      ? "bg-gradient-to-br from-red-900/40 to-red-800/40"
+      : "bg-gradient-to-br from-green-900/40 to-green-800/40",
     fullscreen ? "justify-center" : ""
   );
 
   const titleClasses = cn(
-    "font-bold",
-    fullscreen ? "text-5xl mb-8" : "text-3xl"
+    "font-bold text-white",
+    fullscreen ? "text-6xl mb-8" : "text-3xl"
   );
-
   const statusClasses = cn(
-    "font-bold px-4 py-2 rounded-full",
-    isOccupied ? "bg-red-700 text-white" : "bg-green-700 text-white",
+    "font-bold px-6 py-3 rounded-full backdrop-blur-sm border-2",
+    isOccupied
+      ? "bg-red-600/80 text-white border-red-400"
+      : "bg-green-600/80 text-white border-green-400",
     fullscreen ? "text-3xl" : "text-2xl"
   );
-
-  const infoClasses = cn(fullscreen ? "text-2xl mb-4" : "text-xl mb-2");
-
-  const meetingTitleClasses = cn(
-    "font-semibold",
-    fullscreen ? "text-5xl mb-6" : "text-3xl"
-  );
-
-  const meetingInfoClasses = cn(
-    "flex items-center gap-2",
-    fullscreen ? "text-3xl mb-4" : "text-xl"
-  );
-
-  const progressBarHeight = fullscreen ? "h-8" : "h-6";
 
   return (
     <motion.div
       className={containerClasses}
       animate={{
         borderColor: isOccupied ? "rgb(185, 28, 28)" : "rgb(21, 128, 61)",
-        backgroundColor: isOccupied
-          ? "rgba(153, 27, 27, 0.3)"
-          : "rgba(20, 83, 45, 0.3)",
       }}
       transition={{ duration: 0.5 }}
       whileHover={{ scale: fullscreen ? 1 : 1.02 }}
     >
-      <div className="flex justify-between items-start mb-4">
-        <h2 className={titleClasses}>{room.name}</h2>
-        <div className={statusClasses}>{isOccupied ? "OCCUPÉE" : "LIBRE"}</div>
+      {/* Effet de particules en arrière-plan */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(20)].map((_, i) => (
+          <motion.div
+            key={i}
+            className={`absolute w-2 h-2 rounded-full ${
+              isOccupied ? "bg-red-400/20" : "bg-green-400/20"
+            }`}
+            animate={{
+              x: [0, Math.random() * 100 - 50],
+              y: [0, Math.random() * 100 - 50],
+              opacity: [0, 1, 0],
+            }}
+            transition={{
+              duration: Math.random() * 3 + 2,
+              repeat: Number.POSITIVE_INFINITY,
+              delay: Math.random() * 2,
+            }}
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+          />
+        ))}
       </div>
 
-      <div className={infoClasses}>
-        {room.location} • {room.capacity} personnes
-      </div>
-
-      <div className="flex-1 flex flex-col justify-center">
-        {isOccupied && currentMeeting ? (
-          <div className="space-y-4">
-            <div className={meetingTitleClasses}>{currentMeeting.subject}</div>
-
-            <div className={meetingInfoClasses}>
-              <Clock className={fullscreen ? "h-8 w-8" : "h-6 w-6"} />
+      {/* Contenu principal */}
+      <div className="relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex justify-between items-start mb-6"
+        >
+          <div>
+            <h2 className={titleClasses}>{room.name}</h2>
+            <div
+              className={`flex items-center gap-2 text-gray-300 ${
+                fullscreen ? "text-2xl" : "text-xl"
+              }`}
+            >
+              <MapPin className={fullscreen ? "h-6 w-6" : "h-5 w-5"} />
               <span>
-                {formatFrenchTime(currentMeeting.startTime)} -{" "}
-                {formatFrenchTime(currentMeeting.endTime)}
+                {room.location} • {room.capacity} personnes
               </span>
             </div>
-
-            <div className={meetingInfoClasses}>
-              <Users className={fullscreen ? "h-8 w-8" : "h-6 w-6"} />
-              <span>{currentMeeting.attendeeCount} participants</span>
-            </div>
-
-            <div className={fullscreen ? "text-3xl mb-6" : "text-xl"}>
-              Organisé par {currentMeeting.organizer}
-            </div>
-
-            <div className="space-y-2 mt-4">
-              <div className="relative pt-1">
-                <div className="flex items-center justify-between mb-2">
-                  <div className={fullscreen ? "text-3xl" : "text-xl"}>
-                    Progression
-                  </div>
-                  <div className={fullscreen ? "text-3xl" : "text-xl"}>
-                    {Math.round(occupancyPercentage)}%
-                  </div>
-                </div>
-                <div
-                  className={`overflow-hidden ${progressBarHeight} text-xs flex rounded-full bg-gray-800`}
-                >
-                  <div className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-red-600">
-                    <motion.div
-                      style={{ width: "100%" }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${occupancyPercentage}%` }}
-                      transition={{ duration: 0.5 }}
-                      className="h-full"
-                    />
-                  </div>
-                </div>
-                <div
-                  className={
-                    fullscreen
-                      ? "text-3xl text-right mt-4"
-                      : "text-xl text-right mt-2"
-                  }
-                >
-                  Fin dans {getTimeUntilEnd(currentMeeting.endTime)}
-                </div>
-              </div>
-            </div>
           </div>
-        ) : nextMeeting ? (
-          <div className="space-y-4">
-            <div className={fullscreen ? "text-4xl" : "text-2xl"}>
-              Prochaine réunion:
-            </div>
-            <div className={meetingTitleClasses}>{nextMeeting.subject}</div>
 
-            <div className={meetingInfoClasses}>
-              <Clock className={fullscreen ? "h-8 w-8" : "h-6 w-6"} />
-              <span>
-                {formatFrenchTime(nextMeeting.startTime)} -{" "}
-                {formatFrenchTime(nextMeeting.endTime)}
-              </span>
-            </div>
-
-            <div className={fullscreen ? "text-3xl" : "text-xl"}>
-              Organisé par {nextMeeting.organizer}
-            </div>
-
-            <div className={fullscreen ? "text-4xl mt-8" : "text-2xl mt-4"}>
-              Début dans {getTimeUntilStart(nextMeeting.startTime)}
-            </div>
-          </div>
-        ) : (
-          <div
-            className={
-              fullscreen ? "text-4xl text-center" : "text-2xl text-center"
-            }
+          <motion.div
+            className={statusClasses}
+            animate={{
+              scale: [1, 1.05, 1],
+              boxShadow: isOccupied
+                ? [
+                    "0 0 0 0 rgba(239, 68, 68, 0.7)",
+                    "0 0 0 10px rgba(239, 68, 68, 0)",
+                    "0 0 0 0 rgba(239, 68, 68, 0)",
+                  ]
+                : [
+                    "0 0 0 0 rgba(34, 197, 94, 0.7)",
+                    "0 0 0 10px rgba(34, 197, 94, 0)",
+                    "0 0 0 0 rgba(34, 197, 94, 0)",
+                  ],
+            }}
+            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
           >
-            Aucune réunion prévue aujourd'hui
-          </div>
-        )}
+            <div className="flex items-center gap-2">
+              <Sparkles className={fullscreen ? "h-8 w-8" : "h-6 w-6"} />
+              {isOccupied ? "OCCUPÉE" : "LIBRE"}
+            </div>
+          </motion.div>
+        </motion.div>
+
+        <div className="flex-1 flex flex-col justify-center space-y-8">
+          <AnimatePresence mode="wait">
+            {isOccupied && currentMeeting ? (
+              <motion.div
+                key="occupied"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.5 }}
+                className="space-y-8"
+              >
+                {/* Titre de la réunion */}
+                <motion.div
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className={`font-bold text-white ${
+                    fullscreen ? "text-5xl" : "text-3xl"
+                  }`}
+                >
+                  {currentMeeting.subject}
+                </motion.div>
+
+                {/* Informations de la réunion */}
+                <motion.div
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="grid grid-cols-1 gap-6"
+                >
+                  <div
+                    className={`flex items-center gap-4 ${
+                      fullscreen ? "text-2xl" : "text-xl"
+                    }`}
+                  >
+                    <Clock className={fullscreen ? "h-8 w-8" : "h-6 w-6"} />
+                    <span className="text-gray-200">
+                      {formatFrenchTime(currentMeeting.startTime)} -{" "}
+                      {formatFrenchTime(currentMeeting.endTime)}
+                    </span>
+                  </div>
+
+                  {/* Organisateur */}
+                  {currentMeeting.organizerDetails && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.3 }}
+                      className="flex items-center gap-4 bg-black/20 rounded-lg p-4 backdrop-blur-sm"
+                    >
+                      <AvatarEnhanced
+                        src={currentMeeting.organizerDetails.photo}
+                        name={currentMeeting.organizerDetails.name}
+                        size={fullscreen ? "lg" : "md"}
+                      />
+                      <div>
+                        <div
+                          className={`font-semibold text-white ${
+                            fullscreen ? "text-2xl" : "text-lg"
+                          }`}
+                        >
+                          Organisateur
+                        </div>
+                        <div
+                          className={`text-gray-300 ${
+                            fullscreen ? "text-xl" : "text-base"
+                          }`}
+                        >
+                          {currentMeeting.organizerDetails.name}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
+
+                {/* Barre de progression animée */}
+                <AnimatedProgress
+                  startTime={currentMeeting.startTime}
+                  endTime={currentMeeting.endTime}
+                  fullscreen={fullscreen}
+                />
+
+                {/* Liste des participants */}
+                {currentMeeting.attendees &&
+                  currentMeeting.attendees.length > 0 && (
+                    <ParticipantsList
+                      attendees={currentMeeting.attendees}
+                      maxVisible={fullscreen ? 8 : 4}
+                      fullscreen={fullscreen}
+                    />
+                  )}
+              </motion.div>
+            ) : nextMeeting ? (
+              <motion.div
+                key="next-meeting"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.5 }}
+                className="space-y-6 text-center"
+              >
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+                  className={`text-white ${
+                    fullscreen ? "text-4xl" : "text-2xl"
+                  }`}
+                >
+                  <Calendar
+                    className={`inline-block mr-3 ${
+                      fullscreen ? "h-10 w-10" : "h-8 w-8"
+                    }`}
+                  />
+                  Prochaine réunion
+                </motion.div>
+
+                <div
+                  className={`font-bold text-white ${
+                    fullscreen ? "text-5xl" : "text-3xl"
+                  }`}
+                >
+                  {nextMeeting.subject}
+                </div>
+
+                <div
+                  className={`flex items-center justify-center gap-4 text-gray-300 ${
+                    fullscreen ? "text-2xl" : "text-xl"
+                  }`}
+                >
+                  <Clock className={fullscreen ? "h-8 w-8" : "h-6 w-6"} />
+                  <span>
+                    {formatFrenchTime(nextMeeting.startTime)} -{" "}
+                    {formatFrenchTime(nextMeeting.endTime)}
+                  </span>
+                </div>
+
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Number.POSITIVE_INFINITY,
+                  }}
+                  className={`font-bold text-yellow-400 ${
+                    fullscreen ? "text-4xl" : "text-2xl"
+                  }`}
+                >
+                  Début dans {getTimeUntilStart(nextMeeting.startTime)}
+                </motion.div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="no-meetings"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.5 }}
+                className="text-center space-y-6"
+              >
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
+                  className={`text-green-400 ${
+                    fullscreen ? "text-6xl" : "text-4xl"
+                  }`}
+                >
+                  <Sparkles
+                    className={`mx-auto ${
+                      fullscreen ? "h-20 w-20" : "h-16 w-16"
+                    }`}
+                  />
+                </motion.div>
+                <div
+                  className={`text-white ${
+                    fullscreen ? "text-4xl" : "text-2xl"
+                  }`}
+                >
+                  Aucune réunion prévue aujourd'hui
+                </div>
+                <div
+                  className={`text-gray-300 ${
+                    fullscreen ? "text-2xl" : "text-lg"
+                  }`}
+                >
+                  Salle disponible pour réservation
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </motion.div>
   );
