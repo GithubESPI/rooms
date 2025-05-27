@@ -159,7 +159,11 @@ export async function GET(
                   console.log(
                     `  - Est la salle actuelle: ${isSameAsRoomEmail}`
                   );
-                  console.log(`  - Statut: ${attendee.status?.response}`);
+                  console.log(`  - Statut brut:`, attendee.status);
+                  console.log(
+                    `  - Statut response:`,
+                    attendee.status?.response
+                  );
 
                   // Garder seulement les vraies personnes
                   return (
@@ -169,14 +173,26 @@ export async function GET(
                     email.length > 0
                   );
                 })
-                .map((attendee: any) => ({
-                  name: attendee.emailAddress?.name || "Participant inconnu",
-                  email: attendee.emailAddress?.address || "",
-                  status: attendee.status?.response || "none",
-                  type: attendee.type || "required",
-                  // Ne pas générer de photo fictive, laisser undefined pour utiliser les initiales
-                  photo: undefined,
-                }))
+                .map((attendee: any) => {
+                  // Améliorer la gestion du statut
+                  let status = "none";
+                  if (attendee.status && attendee.status.response) {
+                    status = attendee.status.response.toLowerCase();
+                  }
+
+                  console.log(
+                    `Mapping participant ${attendee.emailAddress?.name}: status final = ${status}`
+                  );
+
+                  return {
+                    name: attendee.emailAddress?.name || "Participant inconnu",
+                    email: attendee.emailAddress?.address || "",
+                    status: status, // Utiliser le statut traité
+                    type: attendee.type || "required",
+                    // Ne pas définir photo ici, elle sera récupérée par le composant AvatarEnhanced
+                    photo: undefined,
+                  };
+                })
             : [];
 
           // Informations de l'organisateur
@@ -185,7 +201,7 @@ export async function GET(
                 name:
                   event.organizer.emailAddress.name || "Organisateur inconnu",
                 email: event.organizer.emailAddress.address || "",
-                // Ne pas générer de photo fictive, laisser undefined pour utiliser les initiales
+                // Ne pas définir photo ici, elle sera récupérée par le composant AvatarEnhanced
                 photo: undefined,
               }
             : undefined;
@@ -319,7 +335,11 @@ export async function GET(
                       console.log(
                         `  - Est la salle actuelle: ${isSameAsRoomEmail}`
                       );
-                      console.log(`  - Statut: ${attendee.status?.response}`);
+                      console.log(`  - Statut brut:`, attendee.status);
+                      console.log(
+                        `  - Statut response:`,
+                        attendee.status?.response
+                      );
 
                       // Garder seulement les vraies personnes
                       return (
@@ -329,14 +349,27 @@ export async function GET(
                         email.length > 0
                       );
                     })
-                    .map((attendee: any) => ({
-                      name:
-                        attendee.emailAddress?.name || "Participant inconnu",
-                      email: attendee.emailAddress?.address || "",
-                      status: attendee.status?.response || "none",
-                      type: attendee.type || "required",
-                      photo: undefined,
-                    }))
+                    .map((attendee: any) => {
+                      // Améliorer la gestion du statut
+                      let status = "none";
+                      if (attendee.status && attendee.status.response) {
+                        status = attendee.status.response.toLowerCase();
+                      }
+
+                      console.log(
+                        `Mapping participant (me/events) ${attendee.emailAddress?.name}: status final = ${status}`
+                      );
+
+                      return {
+                        name:
+                          attendee.emailAddress?.name || "Participant inconnu",
+                        email: attendee.emailAddress?.address || "",
+                        status: status, // Utiliser le statut traité
+                        type: attendee.type || "required",
+                        // Ne pas définir photo ici, elle sera récupérée par le composant AvatarEnhanced
+                        photo: undefined,
+                      };
+                    })
                 : [];
 
               // Informations de l'organisateur
@@ -346,6 +379,7 @@ export async function GET(
                       event.organizer.emailAddress.name ||
                       "Organisateur inconnu",
                     email: event.organizer.emailAddress.address || "",
+                    // Ne pas définir photo ici, elle sera récupérée par le composant AvatarEnhanced
                     photo: undefined,
                   }
                 : undefined;

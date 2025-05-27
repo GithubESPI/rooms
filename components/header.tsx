@@ -36,7 +36,7 @@ export function Header() {
   // Effet pour démarrer le compte à rebours après l'authentification
   useEffect(() => {
     if (status === "authenticated" && !kioskCountdown) {
-      setKioskCountdown(10);
+      setKioskCountdown(1000);
     } else if (status !== "authenticated") {
       setKioskCountdown(null);
       if (timerRef.current) {

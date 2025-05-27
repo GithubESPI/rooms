@@ -237,7 +237,7 @@ export function KioskRoomCard({
                       className="flex items-center gap-4 bg-black/20 rounded-lg p-4 backdrop-blur-sm"
                     >
                       <AvatarEnhanced
-                        src={currentMeeting.organizerDetails.photo}
+                        email={currentMeeting.organizerDetails.email}
                         name={currentMeeting.organizerDetails.name}
                         size={fullscreen ? "lg" : "md"}
                       />

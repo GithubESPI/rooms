@@ -31,7 +31,7 @@ export function MeetingStatusBadge({
         };
       case "past":
         return {
-          label: "Passée",
+          label: "Terminée",
           icon: CheckCircle,
           className:
             "bg-purple-500/30 text-purple-700 dark:text-purple-300 border-purple-500/40 font-semibold",

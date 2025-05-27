@@ -18,14 +18,19 @@ export function ParticipantsList({
 }: ParticipantsListProps) {
   // Filtrer pour ne garder que les participants qui ont accepté ou sont en attente
   // Exclure ceux qui ont décliné
-  const validAttendees = attendees.filter(
-    (attendee) =>
+  const validAttendees = attendees.filter((attendee) => {
+    const isValid =
       attendee.type !== "resource" && // Exclure les ressources (salles)
       attendee.status !== "declined" && // Exclure ceux qui ont décliné
       attendee.email && // S'assurer qu'il y a un email
       attendee.name && // S'assurer qu'il y a un nom
-      attendee.name.trim().length > 0 // S'assurer que le nom n'est pas vide
-  );
+      attendee.name.trim().length > 0; // S'assurer que le nom n'est pas vide
+
+    console.log(
+      `Validation participant ${attendee.name}: status=${attendee.status}, valid=${isValid}`
+    );
+    return isValid;
+  });
 
   // Séparer les participants confirmés des autres
   const confirmedAttendees = validAttendees.filter(
@@ -69,7 +74,11 @@ export function ParticipantsList({
         return "Décliné";
       case "tentative":
         return "Provisoire";
+      case "none":
+      case "notresponded":
+        return "En attente";
       default:
+        console.log(`Statut inconnu: ${status}`);
         return "En attente";
     }
   };
@@ -138,7 +147,7 @@ export function ParticipantsList({
             }`}
           >
             <AvatarEnhanced
-              src={attendee.photo}
+              email={attendee.email}
               name={attendee.name}
               size={fullscreen ? "md" : "sm"}
             />
