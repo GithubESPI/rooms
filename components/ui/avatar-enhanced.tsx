@@ -8,7 +8,7 @@ interface AvatarEnhancedProps {
   src?: string;
   alt?: string;
   name?: string;
-  email?: string; // Ajouter l'email pour récupérer la photo
+  email?: string;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }
@@ -24,6 +24,7 @@ export function AvatarEnhanced({
   const [imageError, setImageError] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(src || null);
   const [loading, setLoading] = useState(false);
+  const [hasAttempted, setHasAttempted] = useState(false);
 
   const sizeClasses = {
     sm: "h-8 w-8 text-xs",
@@ -34,32 +35,53 @@ export function AvatarEnhanced({
 
   // Récupérer la photo depuis Microsoft Graph si on a un email
   useEffect(() => {
-    if (email && !src && !imageError) {
+    if (email && !src && !imageError && !hasAttempted) {
       setLoading(true);
-      fetch(`/api/user-photo/${encodeURIComponent(email)}`)
-        .then((response) => {
-          if (response.ok) {
-            // Créer une URL blob pour l'image
-            return response.blob().then((blob) => {
-              const url = URL.createObjectURL(blob);
-              setPhotoUrl(url);
-              console.log(`Photo chargée pour ${email}`);
-            });
-          } else {
-            console.log(`Aucune photo disponible pour ${email}`);
+      setHasAttempted(true);
+
+      // Ajouter un délai pour éviter trop de requêtes simultanées
+      const delay = Math.random() * 1000 + 500; // Entre 500ms et 1.5s
+
+      const timeoutId = setTimeout(() => {
+        fetch(`/api/user-photo/${encodeURIComponent(email)}`)
+          .then((response) => {
+            if (response.ok) {
+              return response.blob().then((blob) => {
+                const url = URL.createObjectURL(blob);
+                setPhotoUrl(url);
+                console.log(`Photo chargée pour ${email}`);
+              });
+            } else if (response.status === 404) {
+              console.log(`Aucune photo disponible pour ${email}`);
+              setImageError(true);
+            } else if (response.status === 403) {
+              console.log(
+                `Accès refusé pour la photo de ${email} - permissions insuffisantes`
+              );
+              setImageError(true);
+            } else {
+              console.log(
+                `Erreur ${response.status} pour la photo de ${email}`
+              );
+              setImageError(true);
+            }
+          })
+          .catch((error) => {
+            console.log(
+              `Erreur réseau lors du chargement de la photo pour ${email}:`,
+              error.message
+            );
             setImageError(true);
-          }
-        })
-        .catch((error) => {
-          console.error(
-            `Erreur lors du chargement de la photo pour ${email}:`,
-            error
-          );
-          setImageError(true);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }, delay);
+
+      return () => {
+        clearTimeout(timeoutId);
+        setLoading(false);
+      };
     }
 
     // Nettoyer l'URL blob quand le composant est démonté
@@ -68,7 +90,7 @@ export function AvatarEnhanced({
         URL.revokeObjectURL(photoUrl);
       }
     };
-  }, [email, src, imageError]);
+  }, [email, src, imageError, hasAttempted]);
 
   const getInitials = (name?: string) => {
     if (!name) return "?";
@@ -80,8 +102,8 @@ export function AvatarEnhanced({
       .slice(0, 2);
   };
 
-  const getBackgroundColor = (name?: string) => {
-    if (!name) return "bg-gray-500";
+  const getBackgroundColor = (name?: string, email?: string) => {
+    const identifier = name || email || "default";
 
     const colors = [
       "bg-red-500",
@@ -92,9 +114,11 @@ export function AvatarEnhanced({
       "bg-pink-500",
       "bg-indigo-500",
       "bg-teal-500",
+      "bg-orange-500",
+      "bg-cyan-500",
     ];
 
-    const hash = name
+    const hash = identifier
       .split("")
       .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
@@ -105,12 +129,12 @@ export function AvatarEnhanced({
     return (
       <div
         className={cn(
-          "rounded-full flex items-center justify-center border-2 border-white shadow-lg animate-pulse bg-gray-300",
+          "rounded-full flex items-center justify-center border-2 border-white shadow-lg animate-pulse bg-gray-300 dark:bg-gray-700",
           sizeClasses[size],
           className
         )}
       >
-        <div className="animate-spin rounded-full h-1/2 w-1/2 border-b-2 border-gray-600"></div>
+        <div className="animate-spin rounded-full h-1/2 w-1/2 border-b-2 border-gray-600 dark:border-gray-300"></div>
       </div>
     );
   }
@@ -127,28 +151,36 @@ export function AvatarEnhanced({
           className
         )}
         onError={() => {
-          console.log(`Erreur de chargement d'image pour ${name}`);
+          console.log(`Erreur de chargement d'image pour ${name || email}`);
           setImageError(true);
           // Nettoyer l'URL blob en cas d'erreur
           if (photoUrl.startsWith("blob:")) {
             URL.revokeObjectURL(photoUrl);
           }
         }}
+        onLoad={() => {
+          console.log(`Image chargée avec succès pour ${name || email}`);
+        }}
       />
     );
   }
 
-  // Fallback vers les initiales
+  // Fallback vers les initiales avec couleur basée sur le nom ou l'email
   return (
     <div
       className={cn(
         "rounded-full flex items-center justify-center text-white font-semibold border-2 border-white shadow-lg",
         sizeClasses[size],
-        getBackgroundColor(name),
+        getBackgroundColor(name, email),
         className
       )}
+      title={name || email || "Utilisateur"}
     >
-      {name ? getInitials(name) : <User className="h-1/2 w-1/2" />}
+      {name || email ? (
+        getInitials(name || email)
+      ) : (
+        <User className="h-1/2 w-1/2" />
+      )}
     </div>
   );
 }

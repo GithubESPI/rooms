@@ -28,7 +28,20 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, account, profile }) {
+    async jwt({ token, account, profile, trigger }) {
+      // Gérer la déconnexion manuelle
+      if (trigger === "signOut") {
+        console.log("Déconnexion manuelle demandée pour:", token.email);
+        // Marquer le token comme expiré pour forcer la déconnexion
+        token.isManualSignOut = true;
+        return token;
+      }
+
+      // Si c'est une déconnexion manuelle, ne pas rafraîchir le token
+      if (token.isManualSignOut) {
+        return token;
+      }
+
       // Stocker les informations d'authentification de manière permanente
       if (account) {
         // Stocker le token d'accès et le refresh token
@@ -46,11 +59,12 @@ export const authOptions: NextAuthOptions = {
 
         // Marquer le token comme permanent
         token.isPermanent = true;
+        token.isManualSignOut = false;
         console.log("Session permanente établie pour:", token.email);
       }
 
-      // Si c'est une session permanente, toujours essayer de rafraîchir le token si nécessaire
-      if (token.isPermanent && token.refreshToken) {
+      // Si c'est une session permanente et pas une déconnexion manuelle, toujours essayer de rafraîchir le token si nécessaire
+      if (token.isPermanent && token.refreshToken && !token.isManualSignOut) {
         // Vérifier si le token d'accès a expiré ou va expirer dans les 5 prochaines minutes
         const shouldRefresh =
           !token.expiresAt ||
@@ -91,6 +105,7 @@ export const authOptions: NextAuthOptions = {
                   Date.now() / 1000 + refreshedTokens.expires_in
                 ),
                 isPermanent: true, // Maintenir le statut permanent
+                isManualSignOut: false,
               };
             } else {
               console.warn(
@@ -109,14 +124,20 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Toujours retourner le token pour maintenir la session
+      // Toujours retourner le token pour maintenir la session (sauf si déconnexion manuelle)
       return token;
     },
     async session({ session, token }: any) {
+      // Si c'est une déconnexion manuelle, retourner une session vide
+      if (token.isManualSignOut) {
+        return null;
+      }
+
       // Toujours transmettre les informations de session
       session.accessToken = token.accessToken;
       session.refreshToken = token.refreshToken;
       session.isPermanent = token.isPermanent;
+      session.isManualSignOut = token.isManualSignOut;
 
       // Ajouter les informations utilisateur
       if (session.user) {
@@ -128,7 +149,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  // Configuration de session pour ne jamais expirer
+  // Configuration de session pour ne jamais expirer automatiquement
   session: {
     strategy: "jwt",
     maxAge: 365 * 24 * 60 * 60, // 1 an (maximum possible)
@@ -177,6 +198,9 @@ export const authOptions: NextAuthOptions = {
   events: {
     async signIn({ user, account, profile }) {
       console.log(`Session permanente créée pour: ${user.email}`);
+    },
+    async signOut({ token }) {
+      console.log(`Déconnexion manuelle effectuée pour: ${token?.email}`);
     },
     async session({ session, token }) {
       // Log périodique pour confirmer que la session est active

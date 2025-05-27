@@ -9,7 +9,7 @@ export interface MeetingRoom {
 export interface Attendee {
   name: string;
   email: string;
-  status: "accepted" | "declined" | "tentative" | "none";
+  status: "accepted" | "declined" | "tentative" | "none" | "notresponded";
   type: "required" | "optional" | "resource";
   photo?: string;
 }

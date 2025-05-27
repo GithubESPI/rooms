@@ -24,10 +24,13 @@ export function ParticipantsList({
       attendee.status !== "declined" && // Exclure ceux qui ont décliné
       attendee.email && // S'assurer qu'il y a un email
       attendee.name && // S'assurer qu'il y a un nom
-      attendee.name.trim().length > 0; // S'assurer que le nom n'est pas vide
+      attendee.name.trim().length > 0 && // S'assurer que le nom n'est pas vide
+      !attendee.email.toLowerCase().includes("room") && // Exclure les emails de salles
+      !attendee.email.toLowerCase().includes("salle") && // Excluer les emails de salles en français
+      !attendee.email.toLowerCase().includes("mtr"); // Exclure les Microsoft Teams Rooms
 
     console.log(
-      `Validation participant ${attendee.name}: status=${attendee.status}, valid=${isValid}`
+      `Validation participant ${attendee.name} (${attendee.email}): status=${attendee.status}, valid=${isValid}`
     );
     return isValid;
   });
@@ -40,7 +43,8 @@ export function ParticipantsList({
     (attendee) => attendee.status === "tentative"
   );
   const pendingAttendees = validAttendees.filter(
-    (attendee) => attendee.status === "none"
+    (attendee) =>
+      attendee.status === "none" || attendee.status === "notresponded"
   );
 
   // Prioriser l'affichage : confirmés d'abord, puis provisoires, puis en attente
@@ -53,7 +57,7 @@ export function ParticipantsList({
   const visibleAttendees = sortedAttendees.slice(0, maxVisible);
   const remainingCount = Math.max(0, sortedAttendees.length - maxVisible);
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: Attendee["status"]) => {
     switch (status) {
       case "accepted":
         return <Check className="h-3 w-3 text-green-400" />;
@@ -61,12 +65,14 @@ export function ParticipantsList({
         return <X className="h-3 w-3 text-red-400" />;
       case "tentative":
         return <Clock className="h-3 w-3 text-yellow-400" />;
+      case "none":
+      case "notresponded":
       default:
         return <Clock className="h-3 w-3 text-gray-400" />;
     }
   };
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = (status: Attendee["status"]) => {
     switch (status) {
       case "accepted":
         return "Confirmé";
@@ -75,11 +81,27 @@ export function ParticipantsList({
       case "tentative":
         return "Provisoire";
       case "none":
-      case "notresponded":
         return "En attente";
+      case "notresponded":
+        return "Pas de réponse";
       default:
         console.log(`Statut inconnu: ${status}`);
         return "En attente";
+    }
+  };
+
+  const getStatusColor = (status: Attendee["status"]) => {
+    switch (status) {
+      case "accepted":
+        return "bg-green-500/10 border-green-500/30";
+      case "declined":
+        return "bg-red-500/10 border-red-500/30";
+      case "tentative":
+        return "bg-yellow-500/10 border-yellow-500/30";
+      case "none":
+      case "notresponded":
+      default:
+        return "bg-gray-500/10 border-gray-500/30";
     }
   };
 
@@ -98,10 +120,11 @@ export function ParticipantsList({
           } text-gray-400`}
         >
           <Users className={fullscreen ? "h-6 w-6" : "h-5 w-5"} />
-          <span className="font-semibold">Aucun participant invité</span>
+          <span className="font-semibold">Réunion privée</span>
         </div>
         <div className={`text-gray-500 ${fullscreen ? "text-lg" : "text-sm"}`}>
-          Cette réunion n'a pas de participants externes
+          Les participants ne sont pas visibles ou cette réunion n'a pas de
+          participants externes
         </div>
       </motion.div>
     );
@@ -134,17 +157,13 @@ export function ParticipantsList({
       <div className="grid grid-cols-2 gap-3">
         {visibleAttendees.map((attendee, index) => (
           <motion.div
-            key={attendee.email}
+            key={`${attendee.email}-${index}`}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
-            className={`flex items-center gap-3 rounded-lg p-3 backdrop-blur-sm border ${
-              attendee.status === "accepted"
-                ? "bg-green-500/10 border-green-500/30"
-                : attendee.status === "tentative"
-                ? "bg-yellow-500/10 border-yellow-500/30"
-                : "bg-gray-500/10 border-gray-500/30"
-            }`}
+            className={`flex items-center gap-3 rounded-lg p-3 backdrop-blur-sm border ${getStatusColor(
+              attendee.status
+            )}`}
           >
             <AvatarEnhanced
               email={attendee.email}
@@ -156,6 +175,7 @@ export function ParticipantsList({
                 className={`font-medium truncate ${
                   fullscreen ? "text-lg" : "text-sm"
                 }`}
+                title={attendee.name}
               >
                 {attendee.name}
               </div>
@@ -165,6 +185,15 @@ export function ParticipantsList({
                   {getStatusLabel(attendee.status)}
                 </span>
               </div>
+              {/* Afficher l'email en petit pour debug si nécessaire */}
+              {process.env.NODE_ENV === "development" && (
+                <div
+                  className="text-xs text-gray-500 truncate"
+                  title={attendee.email}
+                >
+                  {attendee.email}
+                </div>
+              )}
             </div>
           </motion.div>
         ))}

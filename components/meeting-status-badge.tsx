@@ -37,6 +37,13 @@ export function MeetingStatusBadge({
             "bg-purple-500/30 text-purple-700 dark:text-purple-300 border-purple-500/40 font-semibold",
           iconColor: "text-purple-700 dark:text-purple-300",
         };
+      default:
+        return {
+          label: "Inconnu",
+          icon: Clock,
+          className: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+          iconColor: "text-gray-400",
+        };
     }
   };
 
