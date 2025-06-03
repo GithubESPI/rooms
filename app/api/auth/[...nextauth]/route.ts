@@ -36,7 +36,9 @@ export const authOptions: NextAuthOptions = {
 
       // Stocker les informations d'authentification de manière permanente
       if (account) {
-        console.log("Nouvelle connexion - stockage des tokens");
+        console.log(
+          "Nouvelle connexion - stockage des tokens pour session permanente"
+        );
 
         // Stocker le token d'accès et le refresh token
         token.accessToken = account.access_token;
@@ -50,7 +52,7 @@ export const authOptions: NextAuthOptions = {
           token.email = azureProfile.email;
           token.name = azureProfile.name;
 
-          console.log("Profil utilisateur:", {
+          console.log("Profil utilisateur pour session permanente:", {
             userId: token.userId,
             email: token.email,
             name: token.name,
@@ -60,19 +62,22 @@ export const authOptions: NextAuthOptions = {
         // Marquer le token comme permanent
         token.isPermanent = true;
         token.isManualSignOut = false;
+        token.sessionCreatedAt = Date.now();
         console.log("Session permanente établie pour:", token.email);
       }
 
-      // Si c'est une session permanente et pas une déconnexion manuelle, toujours essayer de rafraîchir le token si nécessaire
+      // Si c'est une session permanente et pas une déconnexion manuelle
       if (token.isPermanent && token.refreshToken && !token.isManualSignOut) {
-        // Vérifier si le token d'accès a expiré ou va expirer dans les 5 prochaines minutes
+        // Vérifier si le token d'accès a expiré ou va expirer dans les 10 prochaines minutes
         const shouldRefresh =
           !token.expiresAt ||
-          Date.now() > (token.expiresAt as number) * 1000 - 5 * 60 * 1000;
+          Date.now() > (token.expiresAt as number) * 1000 - 10 * 60 * 1000;
 
         if (shouldRefresh) {
           try {
-            console.log("Rafraîchissement préventif du token d'accès...");
+            console.log(
+              "Rafraîchissement automatique du token pour session permanente..."
+            );
 
             const response = await fetch(
               "https://login.microsoftonline.com/common/oauth2/v2.0/token",
@@ -94,7 +99,9 @@ export const authOptions: NextAuthOptions = {
 
             if (response.ok) {
               const refreshedTokens = await response.json();
-              console.log("Token rafraîchi avec succès - session maintenue");
+              console.log(
+                "Token rafraîchi avec succès - session permanente maintenue"
+              );
 
               return {
                 ...token,
@@ -106,25 +113,26 @@ export const authOptions: NextAuthOptions = {
                 ),
                 isPermanent: true, // Maintenir le statut permanent
                 isManualSignOut: false,
+                lastRefresh: Date.now(),
               };
             } else {
               console.warn(
-                "Échec du rafraîchissement, mais session maintenue:",
+                "Échec du rafraîchissement, mais session permanente maintenue:",
                 response.status
               );
-              // Même en cas d'échec, on garde la session active
+              // Même en cas d'échec, on garde la session active pour une session permanente
             }
           } catch (error) {
             console.warn(
-              "Erreur lors du rafraîchissement, mais session maintenue:",
+              "Erreur lors du rafraîchissement, mais session permanente maintenue:",
               error
             );
-            // Même en cas d'erreur, on garde la session active
+            // Même en cas d'erreur, on garde la session active pour une session permanente
           }
         }
       }
 
-      // Toujours retourner le token pour maintenir la session (sauf si déconnexion manuelle)
+      // Toujours retourner le token pour maintenir la session permanente (sauf si déconnexion manuelle)
       return token;
     },
     async session({ session, token }: any) {
@@ -167,8 +175,8 @@ export const authOptions: NextAuthOptions = {
   // Configuration de session pour ne jamais expirer automatiquement
   session: {
     strategy: "jwt",
-    maxAge: 365 * 24 * 60 * 60, // 1 an (maximum possible)
-    updateAge: 0, // Ne jamais forcer la mise à jour
+    maxAge: 365 * 24 * 60 * 60 * 10, // 10 ans (pratiquement permanent)
+    updateAge: 0, // Ne jamais forcer la mise à jour automatique
   },
   // Configuration des cookies pour une durée de vie maximale
   cookies: {
@@ -179,7 +187,7 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 365 * 24 * 60 * 60, // 1 an
+        maxAge: 365 * 24 * 60 * 60 * 10, // 10 ans
       },
     },
     callbackUrl: {
@@ -188,7 +196,7 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 365 * 24 * 60 * 60, // 1 an
+        maxAge: 365 * 24 * 60 * 60 * 10, // 10 ans
       },
     },
     csrfToken: {
@@ -198,7 +206,7 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 365 * 24 * 60 * 60, // 1 an
+        maxAge: 365 * 24 * 60 * 60 * 10, // 10 ans
       },
     },
   },

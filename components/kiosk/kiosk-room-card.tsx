@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { OrganizerAvatar } from "@/components/ui/organizer-avatar";
 import { AnimatedProgress } from "./animated-progress";
 import { MeetingEndAnimation } from "./meeting-end-animation";
+import { InteractiveParticipantsList } from "./interactive-participants-list";
 import {
   getCurrentFrenchTime,
   convertUTCToFrenchTime,
@@ -32,6 +33,9 @@ export function KioskRoomCard({
   const [nextMeeting, setNextMeeting] = useState<Meeting | null>(null);
   const [showEndAnimation, setShowEndAnimation] = useState(false);
   const [wasOccupied, setWasOccupied] = useState(false);
+  const [attendanceData, setAttendanceData] = useState<Record<string, boolean>>(
+    {}
+  );
   const previousMeetingRef = useRef<Meeting | null>(null);
 
   useEffect(() => {
@@ -75,6 +79,8 @@ export function KioskRoomCard({
         console.log(`🎉 Fin de réunion détectée pour ${room.name}`);
         setShowEndAnimation(true);
         setWasOccupied(false);
+        // Réinitialiser les données de présence
+        setAttendanceData({});
       }
 
       setCurrentMeeting(current || null);
@@ -96,6 +102,22 @@ export function KioskRoomCard({
     const interval = setInterval(updateCurrentStatus, 10 * 1000);
     return () => clearInterval(interval);
   }, [meetings, room.name, wasOccupied]);
+
+  const handleAttendanceChange = (
+    attendeeEmail: string,
+    isPresent: boolean
+  ) => {
+    setAttendanceData((prev) => ({
+      ...prev,
+      [attendeeEmail]: isPresent,
+    }));
+
+    console.log(
+      `Présence mise à jour pour ${attendeeEmail}: ${
+        isPresent ? "Présent" : "Absent"
+      }`
+    );
+  };
 
   const isOccupied = currentMeeting !== null;
 
@@ -283,6 +305,24 @@ export function KioskRoomCard({
                     endTime={currentMeeting.endTime}
                     fullscreen={fullscreen}
                   />
+
+                  {/* Liste interactive des participants */}
+                  {currentMeeting.attendees &&
+                    currentMeeting.attendees.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.4 }}
+                        className="bg-black/20 rounded-lg p-4 backdrop-blur-sm"
+                      >
+                        <InteractiveParticipantsList
+                          attendees={currentMeeting.attendees}
+                          maxVisible={fullscreen ? 6 : 3}
+                          fullscreen={fullscreen}
+                          onAttendanceChange={handleAttendanceChange}
+                        />
+                      </motion.div>
+                    )}
                 </motion.div>
               ) : nextMeeting ? (
                 <motion.div
@@ -375,6 +415,23 @@ export function KioskRoomCard({
                       </div>
                     </motion.div>
                   )}
+
+                  {/* Aperçu des participants de la prochaine réunion */}
+                  {nextMeeting.attendees &&
+                    nextMeeting.attendees.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.5 }}
+                        className="bg-black/20 rounded-lg p-4 backdrop-blur-sm"
+                      >
+                        <InteractiveParticipantsList
+                          attendees={nextMeeting.attendees}
+                          maxVisible={fullscreen ? 4 : 2}
+                          fullscreen={fullscreen}
+                        />
+                      </motion.div>
+                    )}
                 </motion.div>
               ) : (
                 <motion.div

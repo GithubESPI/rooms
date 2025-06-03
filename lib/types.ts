@@ -4,19 +4,22 @@ export interface MeetingRoom {
   location: string;
   capacity: number;
   features: string[];
+  email?: string;
+  floor?: number;
+  building?: string;
 }
 
 export interface Attendee {
   name: string;
   email: string;
-  status: "accepted" | "declined" | "tentative" | "none" | "notresponded";
-  type: "required" | "optional" | "resource";
-  photo?: string;
-}
-
-export interface Organizer {
-  name: string;
-  email: string;
+  status:
+    | "accepted"
+    | "declined"
+    | "tentative"
+    | "none"
+    | "notresponded"
+    | string;
+  type: "required" | "optional" | "resource" | string;
   photo?: string;
 }
 
@@ -26,24 +29,14 @@ export interface Meeting {
   startTime: string;
   endTime: string;
   organizer: string;
-  organizerDetails?: Organizer;
+  organizerDetails?: {
+    name: string;
+    email: string;
+    photo?: string;
+  };
   attendeeCount?: number;
   attendees?: Attendee[];
   roomId: string;
   description?: string;
   isPrivate?: boolean;
-}
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  image?: string;
-}
-
-export interface Session {
-  user?: User;
-  accessToken?: string;
-  error?: string;
-  expires?: string;
 }

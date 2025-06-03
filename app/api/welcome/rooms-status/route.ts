@@ -187,6 +187,8 @@ export async function GET() {
                 endTime,
                 organizer: organizerDetails?.name || "Organisateur inconnu",
                 organizerDetails,
+                attendeeCount: event.attendees?.length || 0,
+                attendees: event.attendees || [],
                 roomId: room.id,
               };
             });

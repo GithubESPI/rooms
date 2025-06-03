@@ -41,47 +41,59 @@ export function OrganizerAvatar({
           `📸 Récupération photo organisateur: ${organizerName} (${organizerEmail})`
         );
 
-        // Vérifier d'abord si l'utilisateur est connecté
-        const sessionResponse = await fetch("/api/auth/session", {
-          method: "GET",
-          signal: AbortSignal.timeout(2000),
-        });
+        // Essayer plusieurs approches pour récupérer la photo
+        const photoApproaches = [
+          // 1. API authentifiée si disponible
+          `/api/user-photo/${encodeURIComponent(organizerEmail)}`,
+          // 2. API publique en fallback
+          `/api/welcome/user-photo/${encodeURIComponent(organizerEmail)}`,
+        ];
 
-        const isAuthenticated =
-          sessionResponse.ok && (await sessionResponse.json())?.user;
+        for (const [index, apiUrl] of photoApproaches.entries()) {
+          try {
+            console.log(`🔍 Tentative ${index + 1}: ${apiUrl}`);
 
-        // Choisir l'API appropriée
-        const photoApiUrl = isAuthenticated
-          ? `/api/user-photo/${encodeURIComponent(organizerEmail)}`
-          : `/api/welcome/user-photo/${encodeURIComponent(organizerEmail)}`;
+            const photoResponse = await fetch(apiUrl, {
+              method: "GET",
+              headers: { Accept: "image/*" },
+              signal: AbortSignal.timeout(8000),
+            });
 
-        console.log(
-          `🔍 API utilisée: ${photoApiUrl} (authentifié: ${isAuthenticated})`
-        );
-
-        const photoResponse = await fetch(photoApiUrl, {
-          method: "GET",
-          headers: { Accept: "image/*" },
-          signal: AbortSignal.timeout(5000),
-        });
-
-        if (photoResponse.ok) {
-          const blob = await photoResponse.blob();
-          if (blob.size > 0) {
-            const url = URL.createObjectURL(blob);
-            setPhotoUrl(url);
-            console.log(`✅ Photo organisateur chargée: ${organizerName}`);
-          } else {
-            setError(true);
+            if (photoResponse.ok) {
+              const blob = await photoResponse.blob();
+              if (blob.size > 0) {
+                const url = URL.createObjectURL(blob);
+                setPhotoUrl(url);
+                console.log(
+                  `✅ Photo organisateur chargée: ${organizerName} (approche ${
+                    index + 1
+                  })`
+                );
+                return;
+              }
+            } else {
+              console.log(
+                `❌ Erreur ${
+                  photoResponse.status
+                } pour ${organizerName} (approche ${index + 1})`
+              );
+            }
+          } catch (err) {
+            console.log(
+              `💥 Erreur approche ${index + 1} pour ${organizerName}:`,
+              err
+            );
+            continue;
           }
-        } else {
-          console.log(
-            `❌ Erreur ${photoResponse.status} pour ${organizerName}`
-          );
-          setError(true);
         }
+
+        // Si toutes les approches échouent
+        console.log(
+          `❌ Aucune photo trouvée pour ${organizerName}, utilisation des initiales`
+        );
+        setError(true);
       } catch (err) {
-        console.log(`💥 Erreur réseau pour ${organizerName}:`, err);
+        console.log(`💥 Erreur générale pour ${organizerName}:`, err);
         setError(true);
       } finally {
         setLoading(false);
@@ -91,7 +103,7 @@ export function OrganizerAvatar({
     // Délai pour éviter trop de requêtes simultanées
     const timeoutId = setTimeout(
       fetchOrganizerPhoto,
-      Math.random() * 300 + 100
+      Math.random() * 500 + 200
     );
 
     return () => {

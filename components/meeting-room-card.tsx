@@ -255,6 +255,9 @@ export function MeetingRoomCard({ room, index }: MeetingRoomCardProps) {
               <div className="text-xs text-red-600 dark:text-red-400 text-right font-medium">
                 Temps restant: {getTimeUntilEnd(currentMeeting.endTime)}
               </div>
+              <div className="text-xs text-red-600 dark:text-red-400 text-right font-medium">
+                {currentMeeting.organizer}
+              </div>
             </motion.div>
           )}
 

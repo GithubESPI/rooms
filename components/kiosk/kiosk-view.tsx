@@ -35,6 +35,7 @@ export function KioskView() {
     "occupied"
   );
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0);
+  const [showAllRoomsGrid, setShowAllRoomsGrid] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const modeChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const roomChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -181,9 +182,9 @@ export function KioskView() {
     }
   }, []);
 
-  // Alternance entre modes
+  // Alternance entre modes (désactivée si affichage en grille)
   useEffect(() => {
-    if (!autoRotate) return;
+    if (!autoRotate || showAllRoomsGrid) return;
 
     if (modeChangeTimeoutRef.current) {
       clearTimeout(modeChangeTimeoutRef.current);
@@ -201,11 +202,11 @@ export function KioskView() {
         clearTimeout(modeChangeTimeoutRef.current);
       }
     };
-  }, [displayMode, modeChangeInterval, autoRotate]);
+  }, [displayMode, modeChangeInterval, autoRotate, showAllRoomsGrid]);
 
-  // Rotation entre salles
+  // Rotation entre salles (désactivée si affichage en grille)
   useEffect(() => {
-    if (!autoRotate) return;
+    if (!autoRotate || showAllRoomsGrid) return;
 
     const currentModeRooms = roomsWithStatus.filter((room) =>
       displayMode === "occupied" ? room.isOccupied : !room.isOccupied
@@ -238,6 +239,7 @@ export function KioskView() {
     occupiedRoomInterval,
     availableRoomInterval,
     autoRotate,
+    showAllRoomsGrid,
   ]);
 
   // Rafraîchir les données toutes les 2 minutes
@@ -271,6 +273,22 @@ export function KioskView() {
       }
     };
   }, [isFullscreen]);
+
+  // Gérer les raccourcis clavier
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "KeyR") {
+        refreshData();
+      } else if (e.code === "Space") {
+        setAutoRotate((prev) => !prev);
+      } else if (e.code === "KeyG") {
+        setShowAllRoomsGrid((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [refreshData]);
 
   // Filtrer les salles selon le mode d'affichage actuel
   const occupiedRooms = roomsWithStatus.filter((room) => room.isOccupied);
@@ -330,7 +348,24 @@ export function KioskView() {
             </div>
           ) : (
             <AnimatePresence mode="wait">
-              {currentRoom ? (
+              {showAllRoomsGrid ? (
+                // Mode grille avec toutes les salles
+                <motion.div
+                  key="all-rooms-grid"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.5 }}
+                  className="h-full"
+                >
+                  <KioskRoomGrid
+                    rooms={roomsWithStatus}
+                    loading={loading}
+                    fullscreen={isFullscreen}
+                  />
+                </motion.div>
+              ) : currentRoom ? (
+                // Mode salle unique en plein écran
                 <motion.div
                   key={`${displayMode}-${currentRoom.id}`}
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -342,8 +377,9 @@ export function KioskView() {
                   <KioskRoomCard room={currentRoom} fullscreen={true} />
                 </motion.div>
               ) : (
+                // Mode grille par défaut (si aucune salle ne correspond au mode actuel)
                 <motion.div
-                  key="all-rooms"
+                  key="default-grid"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -384,12 +420,24 @@ export function KioskView() {
               currentDisplayMode={displayMode}
               occupiedRoomsCount={occupiedRooms.length}
               availableRoomsCount={availableRooms.length}
-              currentPage={0}
-              totalPages={1}
-              nextPage={() => {}}
-              prevPage={() => {}}
+              currentPage={currentRoomIndex}
+              totalPages={currentModeRooms.length}
+              nextPage={() =>
+                setCurrentRoomIndex(
+                  (prev) => (prev + 1) % Math.max(1, currentModeRooms.length)
+                )
+              }
+              prevPage={() =>
+                setCurrentRoomIndex(
+                  (prev) =>
+                    (prev - 1 + Math.max(1, currentModeRooms.length)) %
+                    Math.max(1, currentModeRooms.length)
+                )
+              }
               refreshData={refreshData}
               loading={loading}
+              showAllRoomsGrid={showAllRoomsGrid}
+              setShowAllRoomsGrid={setShowAllRoomsGrid}
             />
           </motion.div>
         )}

@@ -2,17 +2,20 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { callMicrosoftGraph, isGraphError } from "@/lib/microsoft-graph";
-import type { Meeting } from "@/lib/types";
+import type { Meeting, Attendee } from "@/lib/types";
 
 export async function GET(
   request: Request,
   { params }: { params: { roomId: string } }
 ) {
-  if (!params || typeof params !== "object") {
+  // Await params to fix Next.js error
+  const resolvedParams = await params;
+
+  if (!resolvedParams || typeof resolvedParams !== "object") {
     return NextResponse.json({ error: "Invalid params" }, { status: 400 });
   }
 
-  const roomId = params.roomId;
+  const roomId = resolvedParams.roomId;
 
   try {
     const session = await getServerSession(authOptions);
@@ -52,10 +55,10 @@ export async function GET(
       `📅 Récupération des réunions pour la salle ${roomId} (${roomEmail}) du ${startDateTime} au ${endDateTime}`
     );
 
-    // Utiliser l'endpoint correct pour récupérer les réunions d'une salle
+    // Utiliser l'endpoint correct pour récupérer les réunions d'une salle avec les participants
     try {
-      // Essayer d'abord avec le calendrier de la salle - SANS $expand
-      const calendarViewUrl = `/users/${roomEmail}/calendar/calendarView?startDateTime=${startDateTime}&endDateTime=${endDateTime}&$select=id,subject,start,end,organizer,responseStatus`;
+      // CORRECTION: Suppression de isPrivate qui n'est pas supporté par l'API
+      const calendarViewUrl = `/users/${roomEmail}/calendar/calendarView?startDateTime=${startDateTime}&endDateTime=${endDateTime}&$select=id,subject,start,end,organizer,attendees,responseStatus,body`;
       console.log(`🔍 Appel à l'API: ${calendarViewUrl}`);
 
       const calendarResponse = await callMicrosoftGraph<{ value: any[] }>(
@@ -77,34 +80,19 @@ export async function GET(
           `📊 ${calendarResponse.value.length} réunions trouvées pour la salle ${roomEmail}`
         );
 
-        // DEBUG: Afficher les données brutes de Microsoft Graph
-        console.log("=== 🔍 DONNÉES BRUTES MICROSOFT GRAPH ===");
-        calendarResponse.value.forEach((event, index) => {
-          console.log(`📋 Événement ${index + 1}:`);
-          console.log("  📝 Sujet:", event.subject);
-          console.log("  👤 Organisateur:", event.organizer);
-          console.log("  🕐 Début brut:", event.start);
-          console.log("  🕐 Fin brut:", event.end);
-          console.log("  📊 Response Status:", event.responseStatus);
-        });
-        console.log("=====================================");
-
         // Transformer les données pour correspondre à notre format
         const meetings: Meeting[] = calendarResponse.value.map((event) => {
-          // Gérer les différents formats de date que Microsoft Graph peut retourner
+          // Gérer les différents formats de date
           let startTime: string;
           let endTime: string;
 
           if (event.start?.dateTime) {
-            // Si Microsoft Graph retourne un objet avec dateTime et timeZone
             if (event.start.timeZone && event.start.timeZone !== "UTC") {
               console.log(`🌍 Fuseau horaire détecté: ${event.start.timeZone}`);
 
-              // Créer une date en tenant compte du fuseau horaire
               const startDate = new Date(event.start.dateTime);
               const endDate = new Date(event.end.dateTime);
 
-              // Si le fuseau horaire est déjà français, pas besoin de conversion
               if (
                 event.start.timeZone.includes("Paris") ||
                 event.start.timeZone.includes("Europe")
@@ -112,7 +100,6 @@ export async function GET(
                 startTime = startDate.toISOString();
                 endTime = endDate.toISOString();
               } else {
-                // Sinon, traiter comme UTC
                 startTime = event.start.dateTime.endsWith("Z")
                   ? event.start.dateTime
                   : event.start.dateTime + "Z";
@@ -121,7 +108,6 @@ export async function GET(
                   : event.end.dateTime + "Z";
               }
             } else {
-              // Traiter comme UTC si pas de fuseau horaire spécifié
               startTime = event.start.dateTime.endsWith("Z")
                 ? event.start.dateTime
                 : event.start.dateTime + "Z";
@@ -130,12 +116,11 @@ export async function GET(
                 : event.end.dateTime + "Z";
             }
           } else {
-            // Format de date simple
             startTime = new Date(event.start).toISOString();
             endTime = new Date(event.end).toISOString();
           }
 
-          // Informations de l'organisateur avec plus de détails
+          // Informations de l'organisateur
           const organizerDetails = event.organizer?.emailAddress
             ? {
                 name:
@@ -143,14 +128,47 @@ export async function GET(
                   event.organizer.emailAddress.address?.split("@")[0] ||
                   "Organisateur inconnu",
                 email: event.organizer.emailAddress.address || "",
-                photo: undefined, // Sera récupérée par le composant AvatarEnhanced
               }
             : undefined;
+
+          // Traitement des participants
+          const attendees: Attendee[] = event.attendees
+            ? event.attendees
+                .filter((attendee: any) => {
+                  // Filtrer les ressources et les salles
+                  return (
+                    attendee.emailAddress &&
+                    attendee.emailAddress.address &&
+                    attendee.type !== "resource" &&
+                    !attendee.emailAddress.address
+                      .toLowerCase()
+                      .includes("room") &&
+                    !attendee.emailAddress.address
+                      .toLowerCase()
+                      .includes("salle") &&
+                    !attendee.emailAddress.address
+                      .toLowerCase()
+                      .includes("mtr") &&
+                    attendee.emailAddress.address.toLowerCase() !==
+                      roomEmail.toLowerCase()
+                  );
+                })
+                .map((attendee: any) => ({
+                  name:
+                    attendee.emailAddress.name ||
+                    attendee.emailAddress.address.split("@")[0] ||
+                    "Participant",
+                  email: attendee.emailAddress.address,
+                  status: attendee.status?.response || "none",
+                  type: attendee.type || "required",
+                }))
+            : [];
 
           console.log(`📊 Conversion pour ${event.subject}:`);
           console.log(`  🕐 Original: ${event.start?.dateTime || event.start}`);
           console.log(`  🕐 Converti: ${startTime}`);
           console.log(`  👤 Organisateur:`, organizerDetails);
+          console.log(`  👥 Participants: ${attendees.length}`);
 
           return {
             id: event.id,
@@ -159,8 +177,11 @@ export async function GET(
             endTime,
             organizer: organizerDetails?.name || "Organisateur inconnu",
             organizerDetails,
-            attendeeCount: 0,
+            attendeeCount: attendees.length,
+            attendees,
             roomId,
+            description: event.body?.content || undefined,
+            // Suppression de isPrivate qui n'est pas supporté
           };
         });
 
@@ -177,13 +198,11 @@ export async function GET(
 
       // En cas d'erreur, essayer une approche alternative
       try {
-        console.log(
-          "🔄 Tentative de récupération des événements via me/events..."
-        );
+        console.log("🔄 Tentative de récupération via me/events...");
 
-        // CORRECTION: Supprimer $expand=attendees qui cause l'erreur
+        // CORRECTION: Suppression de isPrivate qui n'est pas supporté par l'API
         const eventsResponse = await callMicrosoftGraph<{ value: any[] }>(
-          `/me/events?$filter=start/dateTime ge '${startDateTime}' and end/dateTime le '${endDateTime}'&$top=100&$select=id,subject,start,end,organizer,location`
+          `/me/events?$filter=start/dateTime ge '${startDateTime}' and end/dateTime le '${endDateTime}'&$top=100&$select=id,subject,start,end,organizer,location,attendees,body`
         );
 
         if (isGraphError(eventsResponse)) {
@@ -221,17 +240,6 @@ export async function GET(
           );
 
           if (roomEvents.length > 0) {
-            // DEBUG: Afficher les données brutes
-            console.log("=== 🔍 DONNÉES BRUTES ME/EVENTS ===");
-            roomEvents.forEach((event, index) => {
-              console.log(`📋 Événement ${index + 1}:`);
-              console.log("  📝 Sujet:", event.subject);
-              console.log("  👤 Organisateur:", event.organizer);
-              console.log("  🕐 Début brut:", event.start);
-              console.log("  🕐 Fin brut:", event.end);
-            });
-            console.log("===============================");
-
             const meetings: Meeting[] = roomEvents.map((event) => {
               let startTime: string;
               let endTime: string;
@@ -255,9 +263,40 @@ export async function GET(
                       event.organizer.emailAddress.address?.split("@")[0] ||
                       "Organisateur inconnu",
                     email: event.organizer.emailAddress.address || "",
-                    photo: undefined,
                   }
                 : undefined;
+
+              // Traitement des participants pour l'approche alternative
+              const attendees: Attendee[] = event.attendees
+                ? event.attendees
+                    .filter((attendee: any) => {
+                      return (
+                        attendee.emailAddress &&
+                        attendee.emailAddress.address &&
+                        attendee.type !== "resource" &&
+                        !attendee.emailAddress.address
+                          .toLowerCase()
+                          .includes("room") &&
+                        !attendee.emailAddress.address
+                          .toLowerCase()
+                          .includes("salle") &&
+                        !attendee.emailAddress.address
+                          .toLowerCase()
+                          .includes("mtr") &&
+                        attendee.emailAddress.address.toLowerCase() !==
+                          roomEmail.toLowerCase()
+                      );
+                    })
+                    .map((attendee: any) => ({
+                      name:
+                        attendee.emailAddress.name ||
+                        attendee.emailAddress.address.split("@")[0] ||
+                        "Participant",
+                      email: attendee.emailAddress.address,
+                      status: attendee.status?.response || "none",
+                      type: attendee.type || "required",
+                    }))
+                : [];
 
               return {
                 id: event.id,
@@ -266,8 +305,11 @@ export async function GET(
                 endTime,
                 organizer: organizerDetails?.name || "Organisateur inconnu",
                 organizerDetails,
-                attendeeCount: 0,
+                attendeeCount: attendees.length,
+                attendees,
                 roomId,
+                description: event.body?.content || undefined,
+                // Suppression de isPrivate qui n'est pas supporté
               };
             });
 
