@@ -33,7 +33,7 @@ export function InteractiveParticipantsList({
     {}
   );
   const [showAll, setShowAll] = useState(false);
-  const [hideParticipants, setHideParticipants] = useState(false);
+  const [hideParticipants, setHideParticipants] = useState(true);
 
   const handleAttendanceChange = (
     attendeeEmail: string,

@@ -112,22 +112,6 @@ export function AnimatedProgress({
           </span>
         </div>
       </div>
-
-      <motion.div
-        key={timeRemaining}
-        initial={{ scale: 1.1, opacity: 0.8 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        className={`text-center font-bold ${
-          progress > 90
-            ? "text-red-400"
-            : progress > 75
-            ? "text-orange-400"
-            : "text-green-400"
-        } ${fullscreen ? "text-2xl" : "text-lg"}`}
-      >
-        Temps restant: {timeRemaining}
-      </motion.div>
     </motion.div>
   );
 }

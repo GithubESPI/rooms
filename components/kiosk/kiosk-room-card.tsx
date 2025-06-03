@@ -16,6 +16,7 @@ import {
   isMeetingActive,
   getTimeUntilStart,
   formatFrenchTime,
+  getTimeUntilEnd,
 } from "@/lib/date-utils";
 
 interface KioskRoomCardProps {
@@ -217,9 +218,22 @@ export function KioskRoomCard({
               }}
               transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
             >
-              <div className="flex items-center gap-2">
-                <Sparkles className={fullscreen ? "h-8 w-8" : "h-6 w-6"} />
-                {isOccupied ? "OCCUPÉE" : "LIBRE"}
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-2">
+                  <Sparkles className={fullscreen ? "h-8 w-8" : "h-6 w-6"} />
+                  {isOccupied ? "OCCUPÉE" : "LIBRE"}
+                </div>
+                {isOccupied && currentMeeting && (
+                  <div
+                    className={
+                      fullscreen
+                        ? "text-2xl font-extrabold text-white drop-shadow-lg mt-2 text-center whitespace-nowrap"
+                        : "text-xs font-bold text-white mt-1 text-center whitespace-nowrap"
+                    }
+                  >
+                    Temps restant : {getTimeUntilEnd(currentMeeting.endTime)}
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
