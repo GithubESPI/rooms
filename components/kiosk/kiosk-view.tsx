@@ -25,7 +25,7 @@ interface RoomWithStatus extends MeetingRoom {
 
 export function KioskView() {
   const [rooms, setRooms] = useState<MeetingRoom[]>([]);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function KioskView() {
     "occupied"
   );
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0);
-  const [showAllRoomsGrid, setShowAllRoomsGrid] = useState(false);
+  const [showAllRoomsGrid, setShowAllRoomsGrid] = useState(true);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const modeChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const roomChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -299,6 +299,13 @@ export function KioskView() {
     displayMode === "occupied" ? occupiedRooms : availableRooms;
   const currentRoom = currentModeRooms[currentRoomIndex] || null;
 
+  // Activer automatiquement le plein écran au montage
+  useEffect(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-black">
       <motion.div
@@ -442,7 +449,6 @@ export function KioskView() {
           </motion.div>
         )}
       </motion.div>
-      <FullscreenPrompt onRequestFullscreen={toggleFullscreen} />
     </div>
   );
 }

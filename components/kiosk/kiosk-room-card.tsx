@@ -580,7 +580,7 @@ export function KioskRoomCard({ room, fullscreen = true }: KioskRoomCardProps) {
                           <div className="flex flex-row items-start gap-3 mt-2 w-full">
                             {/* Bloc Organisé par */}
                             {(nextMeeting as Meeting).organizerDetails && (
-                              <div className="flex items-center gap-2 bg-black/20 rounded-lg p-2 border border-white/10 min-w-[120px]">
+                              <div className="flex items-center gap-2 bg-black/20 rounded-lg p-2 border border-white/10 min-w-[120px] mb-3">
                                 <OrganizerAvatar
                                   organizerEmail={
                                     (nextMeeting as Meeting).organizerDetails!
@@ -613,35 +613,16 @@ export function KioskRoomCard({ room, fullscreen = true }: KioskRoomCardProps) {
                                 </div>
                               </div>
                             )}
-                            {/* Bloc Participants */}
-                            <div className="flex-1 min-w-[120px] max-w-[220px] bg-black/20 rounded-lg p-2 border border-white/10">
-                              <div className="font-bold text-white text-xs mb-1">
-                                Participants
-                              </div>
-                              {(() => {
-                                const attendees = (nextMeeting as Meeting)
-                                  .attendees;
-                                if (attendees && attendees.length > 0) {
-                                  return (
-                                    <ul className="space-y-1">
-                                      {attendees.map((att, idx) => (
-                                        <li
-                                          key={att.email || idx}
-                                          className="text-gray-200 text-xs truncate flex items-center gap-2"
-                                        >
-                                          <span className="inline-block w-2 h-2 rounded-full bg-green-400"></span>
-                                          {att.name || att.email}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  );
+                            {/* Bloc Participants en dessous */}
+                            <div className="w-full">
+                              <InteractiveParticipantsList
+                                attendees={
+                                  (nextMeeting as Meeting).attendees || []
                                 }
-                                return (
-                                  <div className="text-gray-400 text-xs italic">
-                                    Aucun participant
-                                  </div>
-                                );
-                              })()}
+                                maxVisible={fullscreen ? 4 : 2}
+                                fullscreen={fullscreen}
+                                onAttendanceChange={handleAttendanceChange}
+                              />
                             </div>
                           </div>
                         </div>

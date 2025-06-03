@@ -13,7 +13,7 @@ interface ParticipantsListProps {
 
 export function ParticipantsList({
   attendees,
-  maxVisible = 6,
+  maxVisible = 7,
   fullscreen = false,
 }: ParticipantsListProps) {
   // Filtrer pour ne garder que les participants qui ont accepté ou sont en attente
