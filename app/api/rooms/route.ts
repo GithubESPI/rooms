@@ -4,17 +4,16 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import { callMicrosoftGraph, isGraphError } from "@/lib/microsoft-graph";
 import type { MeetingRoom } from "@/lib/types";
 
-// Modifier la fonction GET pour améliorer la récupération des salles
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    // Si pas de session, retourner des données simulées pour la page d'accueil
+    // Si pas de session, retourner une erreur d'authentification
     if (!session) {
-      console.log(
-        "Accès sans authentification - retour de données simulées pour la page d'accueil"
+      return NextResponse.json(
+        { error: "Authentification requise" },
+        { status: 401 }
       );
-      return NextResponse.json(generateMockRoomsForWelcome());
     }
 
     console.log(
@@ -151,11 +150,8 @@ export async function GET() {
       );
     }
 
-    // Si aucune des approches n'a fonctionné, utiliser des données simulées
-    console.log(
-      "Aucune salle trouvée via les API, utilisation de données simulées"
-    );
-    return NextResponse.json(generateMockRooms());
+    // Si aucune salle n'est trouvée, retourner un tableau vide
+    return NextResponse.json([]);
   } catch (error) {
     console.error("Erreur lors de la récupération des salles:", error);
     return NextResponse.json(
@@ -163,86 +159,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
-
-// Fonction pour générer des données simulées spécifiques à la page d'accueil
-function generateMockRoomsForWelcome(): MeetingRoom[] {
-  return [
-    {
-      id: "cronstadt-box-droite",
-      name: "Cronstadt-Box-droite",
-      location: "Bâtiment Cronstadt - Étage 1",
-      capacity: 4,
-      features: ["Écran", "Visioconférence"],
-    },
-    {
-      id: "cronstadt-box-gauche",
-      name: "Cronstadt-Box-gauche",
-      location: "Bâtiment Cronstadt - Étage 1",
-      capacity: 4,
-      features: ["Écran", "Tableau blanc"],
-    },
-    {
-      id: "cronstadt-salle-reunion-bas-mtr",
-      name: "Cronstadt-Salle-de-reunion-bas-MTR",
-      location: "Bâtiment Cronstadt - Rez-de-chaussée",
-      capacity: 8,
-      features: ["Microsoft Teams Room", "Écran", "Visioconférence"],
-    },
-    {
-      id: "cronstadt-salle-reunion-haut",
-      name: "Cronstadt-Salle-de-reunion-Haut",
-      location: "Bâtiment Cronstadt - Étage 2",
-      capacity: 6,
-      features: ["Projecteur", "Tableau blanc"],
-    },
-  ];
-}
-
-// Fonction pour générer des données simulées
-function generateMockRooms(): MeetingRoom[] {
-  return [
-    {
-      id: "room-1",
-      name: "Salle de conférence A",
-      location: "Étage 1",
-      capacity: 10,
-      features: ["Projecteur", "Visioconférence"],
-    },
-    {
-      id: "room-2",
-      name: "Salle de réunion B",
-      location: "Étage 2",
-      capacity: 6,
-      features: ["Écran tactile", "Tableau blanc"],
-    },
-    {
-      id: "room-3",
-      name: "Espace collaboratif",
-      location: "Étage 3",
-      capacity: 15,
-      features: ["Projecteur", "Visioconférence", "Tableau blanc"],
-    },
-    {
-      id: "room-4",
-      name: "Salle de brainstorming",
-      location: "Étage 2",
-      capacity: 8,
-      features: ["Tableau blanc", "Écran tactile"],
-    },
-    {
-      id: "room-5",
-      name: "Salle de réunion C",
-      location: "Étage 1",
-      capacity: 4,
-      features: ["Visioconférence"],
-    },
-    {
-      id: "room-6",
-      name: "Grande salle de conférence",
-      location: "Rez-de-chaussée",
-      capacity: 30,
-      features: ["Projecteur", "Visioconférence", "Système audio"],
-    },
-  ];
 }

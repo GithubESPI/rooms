@@ -3,8 +3,10 @@ import { WeeklyCalendar } from "@/components/weekly-calendar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { headers } from "next/headers";
 import { PageTransition } from "@/components/page-transition";
+
+// Forcer le rendu dynamique
+export const dynamic = "force-dynamic";
 
 // Liste des noms de salles à afficher
 const ALLOWED_ROOM_NAMES = [
@@ -14,37 +16,26 @@ const ALLOWED_ROOM_NAMES = [
   "Cronstadt-Salle-de-reunion-Haut",
 ];
 
-// Fonction pour récupérer les détails d'une salle
+// Fonction pour récupérer les détails d'une salle côté serveur
 async function getRoomDetails(id: string) {
   try {
-    // Récupérer l'URL de base à partir des headers
-    const headersList = await headers();
-    const host = headersList.get("host") || "localhost:3000";
-    const protocol = host.includes("localhost") ? "http" : "https";
-    const baseUrl = `${protocol}://${host}`;
+    // Utiliser l'URL absolue pour les appels côté serveur
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
-    // Appeler l'API pour récupérer toutes les salles
     const response = await fetch(`${baseUrl}/api/rooms`, {
       cache: "no-store",
-      headers: {
-        // Transmettre les cookies pour l'authentification
-        cookie: (await headersList).get("cookie") || "",
-      },
     });
 
     if (!response.ok) {
       console.error(
-        `Erreur lors de la récupération des salles: ${response.status} ${response.statusText}`
+        `Erreur lors de la récupération des salles: ${response.status}`
       );
       return null;
     }
 
     const rooms = await response.json();
-
-    // Trouver la salle correspondant à l'ID
     const room = rooms.find((room: any) => room.id === id);
 
-    // Vérifier si la salle fait partie des salles autorisées
     if (
       room &&
       !ALLOWED_ROOM_NAMES.some((allowedName) => room.name.includes(allowedName))

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,7 @@ import {
 import { AlertCircle, Home, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
-export default function ErrorPage() {
+function ErrorContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
 
@@ -101,7 +102,8 @@ export default function ErrorPage() {
             </summary>
             <div className="mt-2 p-2 bg-muted rounded text-muted-foreground">
               <p>
-                <strong>URL actuelle :</strong> {window.location.href}
+                <strong>URL actuelle :</strong>{" "}
+                {typeof window !== "undefined" ? window.location.href : ""}
               </p>
               <p>
                 <strong>Erreur :</strong> {error}
@@ -135,5 +137,19 @@ export default function ErrorPage() {
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+export default function ErrorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          Chargement...
+        </div>
+      }
+    >
+      <ErrorContent />
+    </Suspense>
   );
 }
