@@ -106,7 +106,7 @@ export function Header() {
 
   // Fonction pour forcer la reconnexion
   const handleReconnect = () => {
-    signIn("azure-ad");
+    signIn("azure-ad", { callbackUrl: "/" });
   };
 
   return (
