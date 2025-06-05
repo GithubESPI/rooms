@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,6 +27,15 @@ import {
   Shield,
   BarChart3,
   AlertCircle,
+  Sparkles,
+  Wifi,
+  Video,
+  Coffee,
+  Presentation,
+  Star,
+  TrendingUp,
+  Globe,
+  Layers,
 } from "lucide-react";
 import Link from "next/link";
 import type { MeetingRoom, Meeting } from "@/lib/types";
@@ -59,22 +68,39 @@ const features = [
     icon: Calendar,
     title: "Gestion en temps réel",
     description: "Consultez la disponibilité des salles instantanément",
+    gradient: "from-blue-500 to-cyan-500",
+    bgGradient: "from-blue-50 to-cyan-50",
   },
   {
     icon: BarChart3,
     title: "Statistiques d'usage",
     description: "Analysez l'utilisation de vos espaces de travail",
+    gradient: "from-purple-500 to-pink-500",
+    bgGradient: "from-purple-50 to-pink-50",
   },
   {
     icon: Shield,
     title: "Sécurisé Microsoft",
     description: "Authentification sécurisée avec votre compte Office 365",
+    gradient: "from-green-500 to-emerald-500",
+    bgGradient: "from-green-50 to-emerald-50",
   },
   {
     icon: Zap,
     title: "Interface moderne",
     description: "Design responsive et mode kiosque pour affichage mural",
+    gradient: "from-orange-500 to-red-500",
+    bgGradient: "from-orange-50 to-red-50",
   },
+];
+
+const floatingIcons = [
+  { icon: Wifi, delay: 0 },
+  { icon: Video, delay: 0.5 },
+  { icon: Coffee, delay: 1 },
+  { icon: Presentation, delay: 1.5 },
+  { icon: Star, delay: 2 },
+  { icon: Globe, delay: 2.5 },
 ];
 
 export function WelcomePage() {
@@ -171,360 +197,951 @@ export function WelcomePage() {
   const availableRooms = rooms.filter((room) => !room.isOccupied).length;
 
   return (
-    <div className="space-y-16">
-      {/* Hero Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="text-center space-y-8"
-      >
-        <div className="space-y-4">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Background avec gradient animé */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-blue-950/30 dark:to-indigo-950/50" />
+
+      {/* Particules flottantes */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {floatingIcons.map((item, index) => (
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-2xl"
+            key={index}
+            className="absolute opacity-10 dark:opacity-5"
+            initial={{
+              x: Math.random() * window.innerWidth,
+              y: Math.random() * window.innerHeight,
+              rotate: 0,
+              scale: 0.5,
+            }}
+            animate={{
+              y: [null, -20, 20, -20],
+              rotate: [0, 360],
+              scale: [0.5, 0.8, 0.5],
+            }}
+            transition={{
+              duration: 20 + Math.random() * 10,
+              repeat: Number.POSITIVE_INFINITY,
+              delay: item.delay,
+              ease: "linear",
+            }}
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
           >
-            <Building2 className="h-10 w-10" />
+            <item.icon className="h-8 w-8 text-[#1B4B8F]" />
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="relative z-10 space-y-20 px-4 py-16">
+        {/* Hero Section avec animations avancées */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className="text-center space-y-12"
+        >
+          <div className="space-y-8">
+            {/* Logo animé avec effets */}
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{
+                delay: 0.3,
+                type: "spring",
+                stiffness: 200,
+                damping: 15,
+              }}
+              className="relative inline-flex items-center justify-center"
+            >
+              <motion.div
+                animate={{
+                  boxShadow: [
+                    "0 0 20px rgba(27, 75, 143, 0.3)",
+                    "0 0 40px rgba(27, 75, 143, 0.5)",
+                    "0 0 20px rgba(27, 75, 143, 0.3)",
+                  ],
+                }}
+                transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
+                className="w-32 h-32 rounded-3xl bg-gradient-to-br from-[#1B4B8F] via-[#2563eb] to-[#0D2B5C] text-white shadow-2xl flex items-center justify-center relative overflow-hidden"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{
+                    duration: 20,
+                    repeat: Number.POSITIVE_INFINITY,
+                    ease: "linear",
+                  }}
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                />
+                <Building2 className="h-16 w-16 relative z-10" />
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+                  className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-3xl"
+                />
+              </motion.div>
+
+              {/* Cercles décoratifs */}
+              <motion.div
+                animate={{ rotate: 360, scale: [1, 1.1, 1] }}
+                transition={{
+                  duration: 15,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "linear",
+                }}
+                className="absolute inset-0 border-2 border-[#1B4B8F]/20 rounded-full w-40 h-40"
+              />
+              <motion.div
+                animate={{ rotate: -360, scale: [1, 0.9, 1] }}
+                transition={{
+                  duration: 12,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "linear",
+                }}
+                className="absolute inset-0 border border-[#1B4B8F]/10 rounded-full w-48 h-48"
+              />
+            </motion.div>
+
+            {/* Titre avec effet de typing */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+            >
+              <motion.h1
+                className="text-6xl md:text-8xl font-black bg-gradient-to-r from-[#1B4B8F] via-[#2563eb] to-[#0D2B5C] dark:from-white dark:via-blue-200 dark:to-white bg-clip-text text-transparent"
+                initial={{ backgroundPosition: "0% 50%" }}
+                animate={{ backgroundPosition: "100% 50%" }}
+                transition={{
+                  duration: 3,
+                  repeat: Number.POSITIVE_INFINITY,
+                  repeatType: "reverse",
+                }}
+                style={{ backgroundSize: "200% 200%" }}
+              >
+                Groupe ESPI
+              </motion.h1>
+
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
+                transition={{ delay: 1.2, duration: 1.5 }}
+                className="h-1 bg-gradient-to-r from-[#1B4B8F] to-[#0D2B5C] mx-auto mt-4 rounded-full"
+                style={{ maxWidth: "300px" }}
+              />
+            </motion.div>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.5 }}
+              className="text-2xl md:text-3xl text-muted-foreground max-w-4xl mx-auto leading-relaxed font-light"
+            >
+              <motion.span
+                animate={{ opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+              >
+                Gestion des salles de réunion en temps réel
+              </motion.span>
+              <motion.span
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{
+                  duration: 2,
+                  repeat: Number.POSITIVE_INFINITY,
+                  delay: 0.5,
+                }}
+                className="inline-block ml-2"
+              >
+                ✨
+              </motion.span>
+            </motion.p>
+          </div>
+
+          {/* Stats en temps réel avec animations */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 2 }}
+            className="flex justify-center items-center gap-8 text-sm flex-wrap"
+          >
+            <AnimatePresence mode="wait">
+              {loading ? (
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex gap-4"
+                >
+                  {[...Array(3)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      animate={{ scale: [1, 1.05, 1] }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Number.POSITIVE_INFINITY,
+                        delay: i * 0.2,
+                      }}
+                    >
+                      <Skeleton className="h-12 w-40 rounded-full" />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              ) : error ? (
+                <motion.div
+                  key="error"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="max-w-2xl"
+                >
+                  <Card className="p-8 text-center border-[#1B4B8F]/20 bg-white/80 backdrop-blur-xl shadow-2xl">
+                    <motion.div
+                      animate={{ rotate: [0, 10, -10, 0] }}
+                      transition={{
+                        duration: 2,
+                        repeat: Number.POSITIVE_INFINITY,
+                      }}
+                    >
+                      <AlertCircle className="h-16 w-16 mx-auto mb-6 text-[#1B4B8F]" />
+                    </motion.div>
+                    <h3 className="text-xl font-bold mb-4 text-[#1B4B8F]">
+                      Données de démonstration
+                    </h3>
+                    <p className="text-muted-foreground mb-6 text-lg">
+                      {error}
+                    </p>
+                    <div className="space-y-3 text-muted-foreground mb-6">
+                      <motion.p
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="flex items-center gap-2"
+                      >
+                        <Sparkles className="h-4 w-4 text-[#1B4B8F]" />
+                        Les données affichées sont simulées à des fins de
+                        démonstration
+                      </motion.p>
+                      <motion.p
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: 0.4 }}
+                        className="flex items-center gap-2"
+                      >
+                        <TrendingUp className="h-4 w-4 text-[#1B4B8F]" />
+                        Connectez-vous pour accéder aux vraies données de vos
+                        salles
+                      </motion.p>
+                    </div>
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button
+                        onClick={fetchRoomsData}
+                        variant="outline"
+                        className="border-2 border-[#1B4B8F] text-[#1B4B8F] hover:bg-[#1B4B8F] hover:text-white transition-all duration-300"
+                        size="lg"
+                      >
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 2,
+                            repeat: Number.POSITIVE_INFINITY,
+                            ease: "linear",
+                          }}
+                          className="mr-2"
+                        >
+                          <Layers className="h-4 w-4" />
+                        </motion.div>
+                        Actualiser les données de démonstration
+                      </Button>
+                    </motion.div>
+                  </Card>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="stats"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex gap-6 flex-wrap justify-center"
+                >
+                  <motion.div
+                    whileHover={{ scale: 1.1, y: -5 }}
+                    className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 backdrop-blur-xl rounded-2xl border border-green-200/50 shadow-lg"
+                  >
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{
+                        duration: 2,
+                        repeat: Number.POSITIVE_INFINITY,
+                      }}
+                    >
+                      <CheckCircle className="h-6 w-6 text-green-600" />
+                    </motion.div>
+                    <span className="font-bold text-green-700 text-lg">
+                      {availableRooms} salles libres
+                    </span>
+                  </motion.div>
+
+                  <motion.div
+                    whileHover={{ scale: 1.1, y: -5 }}
+                    className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-red-500/10 to-pink-500/10 backdrop-blur-xl rounded-2xl border border-red-200/50 shadow-lg"
+                  >
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{
+                        duration: 2,
+                        repeat: Number.POSITIVE_INFINITY,
+                        delay: 0.5,
+                      }}
+                    >
+                      <XCircle className="h-6 w-6 text-red-600" />
+                    </motion.div>
+                    <span className="font-bold text-red-700 text-lg">
+                      {occupiedRooms} salles occupées
+                    </span>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <motion.div
+              whileHover={{ scale: 1.1, y: -5 }}
+              className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-[#1B4B8F]/10 to-[#0D2B5C]/10 backdrop-blur-xl rounded-2xl border border-[#1B4B8F]/20 shadow-lg"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{
+                  duration: 60,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "linear",
+                }}
+              >
+                <Clock className="h-6 w-6 text-[#1B4B8F]" />
+              </motion.div>
+              <motion.span
+                key={currentTime}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="font-bold text-[#1B4B8F] text-lg font-mono"
+              >
+                {currentTime}
+              </motion.span>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+
+        {/* Actions principales avec effets glassmorphism */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2.5 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-6xl mx-auto"
+        >
+          <motion.div
+            whileHover={{ y: -10, scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <Card className="group relative overflow-hidden border-2 hover:border-[#1B4B8F] bg-white/70 backdrop-blur-xl shadow-2xl hover:shadow-3xl transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#1B4B8F]/5 to-[#0D2B5C]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardHeader className="text-center pb-6 relative z-10">
+                <motion.div
+                  whileHover={{ rotate: 360, scale: 1.1 }}
+                  transition={{ duration: 0.6 }}
+                  className="mx-auto w-20 h-20 bg-gradient-to-br from-[#1B4B8F] via-[#2563eb] to-[#0D2B5C] rounded-3xl flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden"
+                >
+                  <motion.div
+                    animate={{
+                      background: [
+                        "linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+                        "linear-gradient(225deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+                        "linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+                      ],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Number.POSITIVE_INFINITY,
+                    }}
+                    className="absolute inset-0"
+                  />
+                  <LogIn className="h-10 w-10 text-white relative z-10" />
+                </motion.div>
+                <CardTitle className="text-3xl font-bold text-[#1B4B8F] mb-4">
+                  Tableau de bord complet
+                </CardTitle>
+                <CardDescription className="text-lg leading-relaxed">
+                  Accédez à toutes les fonctionnalités : gestion des
+                  réservations, statistiques et vue détaillée
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0 relative z-10">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    onClick={() => signIn("azure-ad", { callbackUrl: "/" })}
+                    size="lg"
+                    className="w-full h-14 text-lg bg-gradient-to-r from-[#1B4B8F] to-[#0D2B5C] hover:from-[#0D2B5C] hover:to-[#1B4B8F] text-white shadow-xl hover:shadow-2xl transition-all duration-300 group"
+                  >
+                    <LogIn className="mr-3 h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
+                    Se connecter avec Microsoft
+                    <motion.div
+                      animate={{ x: [0, 5, 0] }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Number.POSITIVE_INFINITY,
+                      }}
+                    >
+                      <ArrowRight className="ml-3 h-5 w-5" />
+                    </motion.div>
+                  </Button>
+                </motion.div>
+              </CardContent>
+            </Card>
           </motion.div>
 
-          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent">
-            O365 Meeting Rooms
-          </h1>
-
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Gérez et consultez vos salles de réunion en temps réel avec une
-            interface moderne et intuitive
-          </p>
-        </div>
-
-        {/* Stats en temps réel */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="flex justify-center items-center gap-8 text-sm"
-        >
-          {loading ? (
-            <div className="flex gap-4">
-              <Skeleton className="h-8 w-32 rounded-full" />
-              <Skeleton className="h-8 w-32 rounded-full" />
-              <Skeleton className="h-8 w-24 rounded-full" />
-            </div>
-          ) : error ? (
-            <Card className="p-8 text-center">
-              <AlertCircle className="h-12 w-12 mx-auto mb-4 text-blue-500" />
-              <h3 className="text-lg font-semibold mb-2">
-                Données de démonstration
-              </h3>
-              <p className="text-muted-foreground mb-4">{error}</p>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p>
-                  • Les données affichées sont simulées à des fins de
-                  démonstration
-                </p>
-                <p>
-                  • Connectez-vous pour accéder aux vraies données de vos salles
-                </p>
-              </div>
-              <Button
-                onClick={fetchRoomsData}
-                variant="outline"
-                className="mt-4"
-              >
-                Actualiser les données de démonstration
-              </Button>
+          <motion.div
+            whileHover={{ y: -10, scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <Card className="group relative overflow-hidden border-2 hover:border-[#0D2B5C] bg-white/70 backdrop-blur-xl shadow-2xl hover:shadow-3xl transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#0D2B5C]/5 to-[#1B4B8F]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardHeader className="text-center pb-6 relative z-10">
+                <motion.div
+                  whileHover={{ rotate: -360, scale: 1.1 }}
+                  transition={{ duration: 0.6 }}
+                  className="mx-auto w-20 h-20 bg-gradient-to-br from-[#0D2B5C] via-[#1e40af] to-[#1B4B8F] rounded-3xl flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden"
+                >
+                  <motion.div
+                    animate={{
+                      background: [
+                        "linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+                        "linear-gradient(225deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+                        "linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+                      ],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Number.POSITIVE_INFINITY,
+                      delay: 1,
+                    }}
+                    className="absolute inset-0"
+                  />
+                  <Monitor className="h-10 w-10 text-white relative z-10" />
+                </motion.div>
+                <CardTitle className="text-3xl font-bold text-[#0D2B5C] mb-4">
+                  Mode Kiosque
+                </CardTitle>
+                <CardDescription className="text-lg leading-relaxed">
+                  Affichage plein écran optimisé pour les écrans muraux et la
+                  consultation rapide
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0 relative z-10">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    variant="outline"
+                    className="w-full h-14 text-lg border-2 border-[#0D2B5C] text-[#0D2B5C] hover:bg-gradient-to-r hover:from-[#0D2B5C] hover:to-[#1B4B8F] hover:text-white shadow-xl hover:shadow-2xl transition-all duration-300 group"
+                    size="lg"
+                    asChild
+                  >
+                    <Link href="/kiosk">
+                      <Monitor className="mr-3 h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
+                      Ouvrir le mode kiosque
+                      <motion.div
+                        animate={{ x: [0, 5, 0] }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Number.POSITIVE_INFINITY,
+                          delay: 0.5,
+                        }}
+                      >
+                        <ArrowRight className="ml-3 h-5 w-5" />
+                      </motion.div>
+                    </Link>
+                  </Button>
+                </motion.div>
+              </CardContent>
             </Card>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 rounded-full">
-                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <span className="font-medium">
-                  {availableRooms} salles libres
-                </span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 rounded-full">
-                <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                <span className="font-medium">
-                  {occupiedRooms} salles occupées
-                </span>
-              </div>
-            </>
-          )}
-          <div className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-            <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <span className="font-medium">{currentTime}</span>
-          </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
 
-      {/* Actions principales */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto"
-      >
-        <Card className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-blue-200 dark:hover:border-blue-800">
-          <CardHeader className="text-center pb-4">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-              <LogIn className="h-8 w-8 text-white" />
-            </div>
-            <CardTitle className="text-2xl">Tableau de bord complet</CardTitle>
-            <CardDescription className="text-base">
-              Accédez à toutes les fonctionnalités : gestion des réservations,
-              statistiques et vue détaillée
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Button
-              onClick={() => signIn("azure-ad", { callbackUrl: "/" })}
-              size="lg"
-              className="w-full h-12 text-lg"
+        {/* Aperçu des salles avec animations staggered */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 3 }}
+          className="space-y-12"
+        >
+          <div className="text-center space-y-6">
+            <motion.h2
+              className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#1B4B8F] to-[#0D2B5C] bg-clip-text text-transparent"
+              initial={{ backgroundPosition: "0% 50%" }}
+              animate={{ backgroundPosition: "100% 50%" }}
+              transition={{
+                duration: 4,
+                repeat: Number.POSITIVE_INFINITY,
+                repeatType: "reverse",
+              }}
+              style={{ backgroundSize: "200% 200%" }}
             >
-              <LogIn className="mr-2 h-4 w-4" />
-              Se connecter avec Microsoft
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-indigo-200 dark:hover:border-indigo-800">
-          <CardHeader className="text-center pb-4">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-              <Monitor className="h-8 w-8 text-white" />
-            </div>
-            <CardTitle className="text-2xl">Mode Kiosque</CardTitle>
-            <CardDescription className="text-base">
-              Affichage plein écran optimisé pour les écrans muraux et la
-              consultation rapide
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Button
-              variant="outline"
-              className="w-full h-12 text-lg border-2 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
-              size="lg"
-              asChild
+              Aperçu des salles de réunion
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 3.2 }}
+              className="text-muted-foreground text-xl"
             >
-              <Link href="/kiosk">
-                <Monitor className="mr-2 h-5 w-5" />
-                Ouvrir le mode kiosque
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Aperçu des salles */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="space-y-8"
-      >
-        <div className="text-center space-y-4">
-          <h2 className="text-3xl font-bold">Aperçu des salles de réunion</h2>
-          <p className="text-muted-foreground text-lg">
-            État actuel de vos espaces de travail
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, index) => (
-              <Card key={index} className="h-full">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-5 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                    </div>
-                    <Skeleton className="h-6 w-16 rounded-full" />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Skeleton className="h-4 w-1/3" />
-                  <Skeleton className="h-8 w-full" />
-                  <div className="flex gap-1">
-                    <Skeleton className="h-6 w-12 rounded-full" />
-                    <Skeleton className="h-6 w-16 rounded-full" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+              État actuel de vos espaces de travail
+            </motion.p>
           </div>
-        ) : error ? (
-          <Card className="p-8 text-center">
-            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
-            <h3 className="text-lg font-semibold mb-2">Erreur de chargement</h3>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <Button onClick={fetchRoomsData} variant="outline">
-              Réessayer
-            </Button>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {rooms.map((room, index) => (
+
+          <AnimatePresence mode="wait">
+            {loading ? (
               <motion.div
-                key={room.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 + index * 0.1 }}
+                key="loading-rooms"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+              >
+                {[...Array(4)].map((_, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card className="h-full bg-white/70 backdrop-blur-xl shadow-xl">
+                      <CardHeader className="pb-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 space-y-3">
+                            <motion.div
+                              animate={{ opacity: [0.5, 1, 0.5] }}
+                              transition={{
+                                duration: 1.5,
+                                repeat: Number.POSITIVE_INFINITY,
+                              }}
+                            >
+                              <Skeleton className="h-6 w-3/4" />
+                            </motion.div>
+                            <Skeleton className="h-4 w-1/2" />
+                          </div>
+                          <Skeleton className="h-8 w-20 rounded-full" />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <Skeleton className="h-4 w-1/3" />
+                        <Skeleton className="h-12 w-full rounded-lg" />
+                        <div className="flex gap-2">
+                          <Skeleton className="h-6 w-16 rounded-full" />
+                          <Skeleton className="h-6 w-20 rounded-full" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
+            ) : error ? (
+              <motion.div
+                key="error-rooms"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+              >
+                <Card className="p-12 text-center border-[#1B4B8F]/20 bg-white/80 backdrop-blur-xl shadow-2xl">
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{
+                      duration: 2,
+                      repeat: Number.POSITIVE_INFINITY,
+                    }}
+                  >
+                    <AlertCircle className="h-20 w-20 mx-auto mb-6 text-[#1B4B8F]" />
+                  </motion.div>
+                  <h3 className="text-2xl font-bold mb-4 text-[#1B4B8F]">
+                    Erreur de chargement
+                  </h3>
+                  <p className="text-muted-foreground mb-8 text-lg">{error}</p>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      onClick={fetchRoomsData}
+                      variant="outline"
+                      className="border-2 border-[#1B4B8F] text-[#1B4B8F] hover:bg-[#1B4B8F] hover:text-white transition-all duration-300"
+                      size="lg"
+                    >
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 2,
+                          repeat: Number.POSITIVE_INFINITY,
+                          ease: "linear",
+                        }}
+                        className="mr-2"
+                      >
+                        <Layers className="h-4 w-4" />
+                      </motion.div>
+                      Réessayer
+                    </Button>
+                  </motion.div>
+                </Card>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="rooms-grid"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+              >
+                {rooms.map((room, index) => (
+                  <motion.div
+                    key={room.id}
+                    initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{
+                      delay: 3.5 + index * 0.1,
+                      type: "spring",
+                      stiffness: 200,
+                      damping: 20,
+                    }}
+                    whileHover={{ y: -10, scale: 1.02 }}
+                  >
+                    <Card
+                      className={`h-full transition-all duration-500 hover:shadow-2xl bg-white/80 backdrop-blur-xl border-2 group ${
+                        room.isOccupied
+                          ? "border-red-200 hover:border-red-400"
+                          : "border-green-200 hover:border-green-400"
+                      }`}
+                    >
+                      <CardHeader className="pb-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <CardTitle className="text-lg font-bold truncate text-[#1B4B8F] group-hover:text-[#0D2B5C] transition-colors duration-300">
+                              {room.name}
+                            </CardTitle>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                              <motion.div
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{
+                                  duration: 2,
+                                  repeat: Number.POSITIVE_INFINITY,
+                                  delay: index * 0.2,
+                                }}
+                              >
+                                <MapPin className="h-4 w-4" />
+                              </motion.div>
+                              <span>{room.location}</span>
+                            </div>
+                          </div>
+                          <motion.div
+                            whileHover={{ scale: 1.1 }}
+                            transition={{ type: "spring", stiffness: 400 }}
+                          >
+                            <Badge
+                              variant={
+                                room.isOccupied ? "destructive" : "default"
+                              }
+                              className={`${
+                                room.isOccupied
+                                  ? "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+                                  : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                              } text-white shadow-lg`}
+                            >
+                              {room.isOccupied ? "Occupée" : "Libre"}
+                            </Badge>
+                          </motion.div>
+                        </div>
+                      </CardHeader>
+
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center gap-3 text-sm text-[#1B4B8F]">
+                          <motion.div
+                            animate={{ scale: [1, 1.1, 1] }}
+                            transition={{
+                              duration: 1.5,
+                              repeat: Number.POSITIVE_INFINITY,
+                              delay: index * 0.3,
+                            }}
+                          >
+                            <Users className="h-4 w-4" />
+                          </motion.div>
+                          <span className="font-medium">
+                            {room.capacity} personnes
+                          </span>
+                        </div>
+
+                        {room.error ? (
+                          <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg border border-yellow-200"
+                          >
+                            <div className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                              {room.error}
+                            </div>
+                          </motion.div>
+                        ) : (
+                          <>
+                            <AnimatePresence mode="wait">
+                              {room.currentMeeting && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.8 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.8 }}
+                                  className="p-3 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20 rounded-lg border border-red-200 dark:border-red-800"
+                                >
+                                  <div className="text-sm font-bold text-red-800 dark:text-red-200 flex items-center gap-2">
+                                    <motion.div
+                                      animate={{ scale: [1, 1.2, 1] }}
+                                      transition={{
+                                        duration: 1,
+                                        repeat: Number.POSITIVE_INFINITY,
+                                      }}
+                                    >
+                                      🔴
+                                    </motion.div>
+                                    En cours: {room.currentMeeting.subject}
+                                  </div>
+                                  <div className="text-xs text-red-600 dark:text-red-300 mt-1">
+                                    Jusqu'à{" "}
+                                    {formatFrenchTime(
+                                      room.currentMeeting.endTime
+                                    )}
+                                  </div>
+                                </motion.div>
+                              )}
+
+                              {room.nextMeeting && !room.currentMeeting && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.8 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.8 }}
+                                  className="p-3 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-950/20 dark:to-yellow-950/20 rounded-lg border border-orange-200 dark:border-orange-800"
+                                >
+                                  <div className="text-sm font-bold text-orange-800 dark:text-orange-200 flex items-center gap-2">
+                                    <motion.div
+                                      animate={{ scale: [1, 1.2, 1] }}
+                                      transition={{
+                                        duration: 1.5,
+                                        repeat: Number.POSITIVE_INFINITY,
+                                      }}
+                                    >
+                                      🟡
+                                    </motion.div>
+                                    Prochaine: {room.nextMeeting.subject}
+                                  </div>
+                                  <div className="text-xs text-orange-600 dark:text-orange-300 mt-1">
+                                    Dans{" "}
+                                    {getTimeUntilStart(
+                                      room.nextMeeting.startTime
+                                    )}{" "}
+                                    à{" "}
+                                    {formatFrenchTime(
+                                      room.nextMeeting.startTime
+                                    )}
+                                  </div>
+                                </motion.div>
+                              )}
+
+                              {!room.currentMeeting && !room.nextMeeting && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.8 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.8 }}
+                                  className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg border border-green-200 dark:border-green-800"
+                                >
+                                  <div className="text-sm font-bold text-green-800 dark:text-green-200 flex items-center gap-2">
+                                    <motion.div
+                                      animate={{ rotate: 360 }}
+                                      transition={{
+                                        duration: 3,
+                                        repeat: Number.POSITIVE_INFINITY,
+                                        ease: "linear",
+                                      }}
+                                    >
+                                      🟢
+                                    </motion.div>
+                                    Aucune réunion prévue aujourd'hui
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </>
+                        )}
+
+                        <div className="flex flex-wrap gap-2">
+                          {room.features.slice(0, 3).map((feature, idx) => (
+                            <motion.span
+                              key={idx}
+                              initial={{ opacity: 0, scale: 0 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{
+                                delay: 3.8 + index * 0.1 + idx * 0.05,
+                              }}
+                              whileHover={{ scale: 1.1 }}
+                              className="text-xs bg-gradient-to-r from-[#1B4B8F]/10 to-[#0D2B5C]/10 text-[#1B4B8F] px-3 py-1 rounded-full border border-[#1B4B8F]/20 font-medium"
+                            >
+                              {feature}
+                            </motion.span>
+                          ))}
+                          {room.features.length > 3 && (
+                            <motion.span
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 4 + index * 0.1 }}
+                              className="text-xs text-muted-foreground font-medium"
+                            >
+                              +{room.features.length - 3}
+                            </motion.span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Fonctionnalités avec effets avancés */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 4.5 }}
+          className="space-y-12"
+        >
+          <div className="text-center space-y-6">
+            <motion.h2
+              className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#1B4B8F] to-[#0D2B5C] bg-clip-text text-transparent"
+              initial={{ backgroundPosition: "0% 50%" }}
+              animate={{ backgroundPosition: "100% 50%" }}
+              transition={{
+                duration: 5,
+                repeat: Number.POSITIVE_INFINITY,
+                repeatType: "reverse",
+              }}
+              style={{ backgroundSize: "200% 200%" }}
+            >
+              Fonctionnalités principales
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 4.7 }}
+              className="text-muted-foreground text-xl"
+            >
+              Tout ce dont vous avez besoin pour gérer vos espaces
+            </motion.p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 50, rotateY: -90 }}
+                animate={{ opacity: 1, y: 0, rotateY: 0 }}
+                transition={{
+                  delay: 5 + index * 0.2,
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 20,
+                }}
+                whileHover={{ y: -15, rotateY: 5, scale: 1.05 }}
+                style={{ transformStyle: "preserve-3d" }}
               >
                 <Card
-                  className={`h-full transition-all duration-300 hover:shadow-lg ${
-                    room.isOccupied
-                      ? "border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20"
-                      : "border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20"
-                  }`}
+                  className={`h-full text-center hover:shadow-2xl transition-all duration-500 group bg-gradient-to-br ${feature.bgGradient} dark:from-slate-800 dark:to-slate-900 backdrop-blur-xl border-2 border-white/20 hover:border-white/40 relative overflow-hidden`}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold truncate">
-                          {room.name}
-                        </CardTitle>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                          <MapPin className="h-3 w-3" />
-                          <span>{room.location}</span>
-                        </div>
-                      </div>
-                      <Badge
-                        variant={room.isOccupied ? "destructive" : "default"}
-                        className={`${
-                          room.isOccupied
-                            ? "bg-red-500 hover:bg-red-600"
-                            : "bg-green-500 hover:bg-green-600"
-                        } text-white`}
-                      >
-                        {room.isOccupied ? "Occupée" : "Libre"}
-                      </Badge>
-                    </div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <CardHeader className="relative z-10">
+                    <motion.div
+                      whileHover={{
+                        rotate: 360,
+                        scale: 1.2,
+                      }}
+                      transition={{ duration: 0.6 }}
+                      className={`mx-auto w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden`}
+                    >
+                      <motion.div
+                        animate={{
+                          background: [
+                            "linear-gradient(45deg, rgba(255,255,255,0.2) 0%, transparent 100%)",
+                            "linear-gradient(225deg, rgba(255,255,255,0.2) 0%, transparent 100%)",
+                            "linear-gradient(45deg, rgba(255,255,255,0.2) 0%, transparent 100%)",
+                          ],
+                        }}
+                        transition={{
+                          duration: 3,
+                          repeat: Number.POSITIVE_INFINITY,
+                          delay: index * 0.5,
+                        }}
+                        className="absolute inset-0"
+                      />
+                      <feature.icon className="h-8 w-8 text-white relative z-10" />
+                    </motion.div>
+                    <CardTitle className="text-xl font-bold text-[#1B4B8F] group-hover:text-[#0D2B5C] transition-colors duration-300">
+                      {feature.title}
+                    </CardTitle>
+                    <CardDescription className="text-base leading-relaxed">
+                      {feature.description}
+                    </CardDescription>
                   </CardHeader>
-
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span>{room.capacity} personnes</span>
-                    </div>
-
-                    {room.error ? (
-                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-md">
-                        <div className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                          {room.error}
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {room.currentMeeting && (
-                          <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-md">
-                            <div className="text-sm font-medium text-red-800 dark:text-red-200">
-                              En cours: {room.currentMeeting.subject}
-                            </div>
-                            <div className="text-xs text-red-600 dark:text-red-400 mt-1">
-                              Jusqu'à{" "}
-                              {formatFrenchTime(room.currentMeeting.endTime)}
-                            </div>
-                          </div>
-                        )}
-
-                        {room.nextMeeting && !room.currentMeeting && (
-                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-md">
-                            <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                              Prochaine: {room.nextMeeting.subject}
-                            </div>
-                            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                              Dans{" "}
-                              {getTimeUntilStart(room.nextMeeting.startTime)} à{" "}
-                              {formatFrenchTime(room.nextMeeting.startTime)}
-                            </div>
-                          </div>
-                        )}
-
-                        {!room.currentMeeting && !room.nextMeeting && (
-                          <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-md">
-                            <div className="text-sm font-medium text-green-800 dark:text-green-200">
-                              Aucune réunion prévue aujourd'hui
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-
-                    <div className="flex flex-wrap gap-1">
-                      {room.features.slice(0, 3).map((feature, idx) => (
-                        <span
-                          key={idx}
-                          className="text-xs bg-secondary px-2 py-1 rounded-full"
-                        >
-                          {feature}
-                        </span>
-                      ))}
-                      {room.features.length > 3 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{room.features.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
                 </Card>
               </motion.div>
             ))}
           </div>
-        )}
-      </motion.div>
+        </motion.div>
 
-      {/* Fonctionnalités */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2 }}
-        className="space-y-8"
-      >
-        <div className="text-center space-y-4">
-          <h2 className="text-3xl font-bold">Fonctionnalités principales</h2>
-          <p className="text-muted-foreground text-lg">
-            Tout ce dont vous avez besoin pour gérer vos espaces
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.3 + index * 0.1 }}
-            >
-              <Card className="h-full text-center hover:shadow-lg transition-all duration-300 group">
-                <CardHeader>
-                  <div className="mx-auto w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                    <feature.icon className="h-6 w-6 text-white" />
-                  </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                  <CardDescription>{feature.description}</CardDescription>
-                </CardHeader>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Footer info */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.6 }}
-        className="text-center py-8 border-t border-border/50"
-      >
-        <p className="text-sm text-muted-foreground">
-          Connectez-vous avec votre compte Microsoft Office 365 pour accéder à
-          toutes les fonctionnalités
-        </p>
-      </motion.div>
+        {/* Footer info avec animation finale */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 6 }}
+          className="text-center py-12 border-t border-[#1B4B8F]/20 relative"
+        >
+          <motion.div
+            animate={{
+              background: [
+                "linear-gradient(90deg, transparent 0%, rgba(27, 75, 143, 0.1) 50%, transparent 100%)",
+                "linear-gradient(270deg, transparent 0%, rgba(27, 75, 143, 0.1) 50%, transparent 100%)",
+              ],
+            }}
+            transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY }}
+            className="absolute inset-0"
+          />
+          <motion.p
+            className="text-muted-foreground text-lg relative z-10"
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
+          >
+            Connectez-vous avec votre compte Microsoft Office 365 pour accéder à
+            toutes les fonctionnalités
+          </motion.p>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{
+              duration: 20,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: "linear",
+            }}
+            className="inline-block mt-4"
+          >
+            <Sparkles className="h-6 w-6 text-[#1B4B8F]" />
+          </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }

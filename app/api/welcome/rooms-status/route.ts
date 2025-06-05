@@ -1,221 +1,203 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
-import { callMicrosoftGraph, isGraphError } from "@/lib/microsoft-graph";
-import type { MeetingRoom, Meeting } from "@/lib/types";
 
-// Forcer le rendu dynamique
-export const dynamic = "force-dynamic";
+// Données fictives réalistes pour la démonstration
+const mockRoomsData = [
+  {
+    id: "salle-innovation",
+    name: "Salle Innovation",
+    location: "Bâtiment Principal - 2ème étage",
+    capacity: 12,
+    features: ["Écran 4K", "Visioconférence", "Tableau blanc", "WiFi Premium"],
+    meetings: [
+      {
+        id: "meeting-1",
+        subject: "Réunion équipe Marketing",
+        organizer: "Sophie Martin",
+        startTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // Dans 2h
+        endTime: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(), // Dans 3h
+        attendees: [
+          "sophie.martin@espi.fr",
+          "julien.dubois@espi.fr",
+          "marie.bernard@espi.fr",
+        ],
+      },
+    ],
+  },
+  {
+    id: "salle-collaboration",
+    name: "Salle Collaboration",
+    location: "Bâtiment Principal - 1er étage",
+    capacity: 8,
+    features: [
+      "Mobilier modulaire",
+      "Écran tactile",
+      "Caméra 360°",
+      "Système audio",
+    ],
+    meetings: [
+      {
+        id: "meeting-2",
+        subject: "Formation nouveaux arrivants",
+        organizer: "Pierre Durand",
+        startTime: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // Commencé il y a 30min
+        endTime: new Date(Date.now() + 90 * 60 * 1000).toISOString(), // Finit dans 1h30
+        attendees: [
+          "pierre.durand@espi.fr",
+          "alice.moreau@espi.fr",
+          "thomas.petit@espi.fr",
+        ],
+      },
+    ],
+  },
+  {
+    id: "salle-direction",
+    name: "Salle de Direction",
+    location: "Bâtiment Principal - 3ème étage",
+    capacity: 16,
+    features: [
+      "Table de conférence",
+      "Écran LED",
+      "Système de vote",
+      "Climatisation",
+    ],
+    meetings: [
+      {
+        id: "meeting-3",
+        subject: "Comité de direction mensuel",
+        organizer: "Jean-Claude Directeur",
+        startTime: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(), // Dans 4h
+        endTime: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(), // Dans 6h
+        attendees: [
+          "jc.directeur@espi.fr",
+          "marie.rh@espi.fr",
+          "paul.finance@espi.fr",
+        ],
+      },
+    ],
+  },
+  {
+    id: "salle-creative",
+    name: "Espace Créatif",
+    location: "Annexe - Rez-de-chaussée",
+    capacity: 6,
+    features: ["Mur d'écriture", "Poufs", "Éclairage LED", "Plantes vertes"],
+    meetings: [], // Salle libre toute la journée
+  },
+  {
+    id: "salle-formation",
+    name: "Salle de Formation",
+    location: "Bâtiment Formation - 1er étage",
+    capacity: 20,
+    features: [
+      "Projecteur HD",
+      "Micros sans fil",
+      "Prises USB",
+      "Tables modulaires",
+    ],
+    meetings: [
+      {
+        id: "meeting-4",
+        subject: "Workshop Design Thinking",
+        organizer: "Laura Designer",
+        startTime: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // Commencé il y a 1h
+        endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // Finit dans 2h
+        attendees: [
+          "laura.designer@espi.fr",
+          "marc.dev@espi.fr",
+          "julie.ux@espi.fr",
+        ],
+      },
+      {
+        id: "meeting-5",
+        subject: "Présentation projet étudiant",
+        organizer: "Professeur Leclerc",
+        startTime: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(), // Dans 3h
+        endTime: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(), // Dans 4h
+        attendees: [
+          "prof.leclerc@espi.fr",
+          "etudiant1@espi.fr",
+          "etudiant2@espi.fr",
+        ],
+      },
+    ],
+  },
+  {
+    id: "salle-reunion-a",
+    name: "Salle Réunion A",
+    location: "Bâtiment Principal - 1er étage",
+    capacity: 10,
+    features: ["Écran partagé", "Téléphone", "Paperboard", "Machine à café"],
+    meetings: [
+      {
+        id: "meeting-6",
+        subject: "Point hebdomadaire équipe Dev",
+        organizer: "Alexandre Tech",
+        startTime: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // Dans 30min
+        endTime: new Date(Date.now() + 90 * 60 * 1000).toISOString(), // Dans 1h30
+        attendees: [
+          "alex.tech@espi.fr",
+          "sarah.dev@espi.fr",
+          "kevin.backend@espi.fr",
+        ],
+      },
+    ],
+  },
+  {
+    id: "salle-reunion-b",
+    name: "Salle Réunion B",
+    location: "Bâtiment Principal - 2ème étage",
+    capacity: 8,
+    features: ["Écran TV", "Webcam HD", "Haut-parleurs", "Éclairage naturel"],
+    meetings: [], // Salle libre
+  },
+  {
+    id: "salle-brainstorming",
+    name: "Salle Brainstorming",
+    location: "Annexe - 1er étage",
+    capacity: 14,
+    features: [
+      "Murs blancs",
+      "Feutres",
+      "Post-it",
+      "Canapés",
+      "Musique d'ambiance",
+    ],
+    meetings: [
+      {
+        id: "meeting-7",
+        subject: "Idéation nouveau produit",
+        organizer: "Emma Innovation",
+        startTime: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(), // Dans 5h
+        endTime: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(), // Dans 7h
+        attendees: [
+          "emma.innovation@espi.fr",
+          "lucas.product@espi.fr",
+          "chloe.marketing@espi.fr",
+        ],
+      },
+    ],
+  },
+];
 
 export async function GET() {
   try {
-    // Vérifier si l'utilisateur est authentifié
-    const session = await getServerSession(authOptions);
+    // Simuler un petit délai pour rendre l'expérience réaliste
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    if (!session) {
-      return NextResponse.json(
-        { error: "Authentification requise" },
-        { status: 401 }
-      );
-    }
-
-    // Liste des salles autorisées
-    const ALLOWED_ROOM_NAMES = [
-      "Cronstadt-Box-droite",
-      "Cronstadt-Box-gauche",
-      "Cronstadt-Salle-de-reunion-bas-MTR",
-      "Cronstadt-Salle-de-reunion-Haut",
-    ];
-
-    // Récupérer les salles via l'API Microsoft Graph
-    let rooms: MeetingRoom[] = [];
-
-    // Approche 1: Utiliser l'API findRooms
-    try {
-      const response = await callMicrosoftGraph<{ value: any[] }>(
-        "/me/findRooms"
-      );
-
-      if (
-        !isGraphError(response) &&
-        response.value &&
-        response.value.length > 0
-      ) {
-        rooms = response.value.map((room) => ({
-          id: room.address,
-          name: room.name,
-          location: "Non spécifié",
-          capacity: 0,
-          features: [],
-        }));
-      }
-    } catch (error) {
-      console.warn("Erreur lors de l'utilisation de l'API findRooms:", error);
-    }
-
-    // Si aucune salle n'a été trouvée, essayer l'API places
-    if (rooms.length === 0) {
-      try {
-        const placesResponse = await callMicrosoftGraph<{ value: any[] }>(
-          "/places/microsoft.graph.room"
-        );
-
-        if (
-          !isGraphError(placesResponse) &&
-          placesResponse.value &&
-          placesResponse.value.length > 0
-        ) {
-          rooms = placesResponse.value
-            .filter(
-              (room) => room.displayName && room.displayName.trim().length > 0
-            )
-            .map((room) => ({
-              id: room.emailAddress || room.id,
-              name: room.displayName,
-              location: room.address?.city || room.building || "Non spécifié",
-              capacity: room.capacity || 0,
-              features: [
-                ...(room.audioDeviceName ? ["Visioconférence"] : []),
-                ...(room.videoDeviceName ? ["Caméra"] : []),
-                ...(room.displayDevice ? ["Écran"] : []),
-                ...(room.isWheelChairAccessible ? ["Accessible PMR"] : []),
-              ],
-            }));
-        }
-      } catch (error) {
-        console.warn("Erreur lors de l'utilisation de l'API places:", error);
-      }
-    }
-
-    // Filtrer les salles autorisées
-    const filteredRooms = rooms.filter((room) =>
-      ALLOWED_ROOM_NAMES.some((allowedName) => room.name.includes(allowedName))
-    );
-
-    // Pour chaque salle, récupérer les réunions du jour
-    const roomsWithMeetings = await Promise.all(
-      filteredRooms.map(async (room) => {
-        try {
-          // Définir la plage de temps pour aujourd'hui
-          const now = new Date();
-          const startOfDay = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate()
-          );
-          const endOfDay = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate(),
-            23,
-            59,
-            59
-          );
-
-          // Formater les dates pour l'API
-          const startDateTime = startOfDay.toISOString();
-          const endDateTime = endOfDay.toISOString();
-
-          // Construire l'adresse email de la salle si nécessaire
-          const roomEmail = room.id.includes("@")
-            ? room.id
-            : `${room.id}@${
-                process.env.MICROSOFT_TENANT_DOMAIN || "tenant.onmicrosoft.com"
-              }`;
-
-          // Récupérer les réunions de la salle
-          const calendarViewUrl = `/users/${roomEmail}/calendar/calendarView?startDateTime=${startDateTime}&endDateTime=${endDateTime}&$select=id,subject,start,end,organizer,responseStatus`;
-          const calendarResponse = await callMicrosoftGraph<{ value: any[] }>(
-            calendarViewUrl
-          );
-
-          let meetings: Meeting[] = [];
-
-          if (!isGraphError(calendarResponse) && calendarResponse.value) {
-            meetings = calendarResponse.value.map((event) => {
-              // Gérer les différents formats de date
-              let startTime: string;
-              let endTime: string;
-
-              if (event.start?.dateTime) {
-                if (event.start.timeZone && event.start.timeZone !== "UTC") {
-                  const startDate = new Date(event.start.dateTime);
-                  const endDate = new Date(event.end.dateTime);
-
-                  if (
-                    event.start.timeZone.includes("Paris") ||
-                    event.start.timeZone.includes("Europe")
-                  ) {
-                    startTime = startDate.toISOString();
-                    endTime = endDate.toISOString();
-                  } else {
-                    startTime = event.start.dateTime.endsWith("Z")
-                      ? event.start.dateTime
-                      : event.start.dateTime + "Z";
-                    endTime = event.end.dateTime.endsWith("Z")
-                      ? event.end.dateTime
-                      : event.end.dateTime + "Z";
-                  }
-                } else {
-                  startTime = event.start.dateTime.endsWith("Z")
-                    ? event.start.dateTime
-                    : event.start.dateTime + "Z";
-                  endTime = event.end.dateTime.endsWith("Z")
-                    ? event.end.dateTime
-                    : event.end.dateTime + "Z";
-                }
-              } else {
-                startTime = new Date(event.start).toISOString();
-                endTime = new Date(event.end).toISOString();
-              }
-
-              // Informations de l'organisateur
-              const organizerDetails = event.organizer?.emailAddress
-                ? {
-                    name:
-                      event.organizer.emailAddress.name ||
-                      event.organizer.emailAddress.address?.split("@")[0] ||
-                      "Organisateur inconnu",
-                    email: event.organizer.emailAddress.address || "",
-                  }
-                : undefined;
-
-              return {
-                id: event.id,
-                subject: event.subject || "Réunion sans titre",
-                startTime,
-                endTime,
-                organizer: organizerDetails?.name || "Organisateur inconnu",
-                organizerDetails,
-                attendeeCount: event.attendees?.length || 0,
-                attendees: event.attendees || [],
-                roomId: room.id,
-              };
-            });
-          }
-
-          return {
-            ...room,
-            meetings,
-          };
-        } catch (error) {
-          console.error(
-            `Erreur lors de la récupération des réunions pour ${room.name}:`,
-            error
-          );
-          return {
-            ...room,
-            meetings: [],
-          };
-        }
-      })
-    );
-
-    return NextResponse.json(roomsWithMeetings);
+    return NextResponse.json(mockRoomsData, {
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
   } catch (error) {
-    console.error("Erreur lors de la génération des données:", error);
+    console.error(
+      "Erreur lors de la génération des données de démonstration:",
+      error
+    );
     return NextResponse.json(
-      { error: "Erreur lors du chargement des données" },
+      { error: "Erreur lors de la génération des données de démonstration" },
       { status: 500 }
     );
   }
