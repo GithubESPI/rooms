@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
-import { LogIn, Monitor, LogOut, AlertTriangle } from "lucide-react";
-import { useSession, signIn, signOut, canSignOut } from "@/lib/auth";
+import { LogIn, Monitor, LogOut, AlertTriangle, RefreshCw } from "lucide-react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -22,7 +22,7 @@ import {
 import { toast } from "@/components/ui/use-toast";
 
 export function Header() {
-  const { session, status } = useSession();
+  const { data: session, status } = useSession();
   const [currentTime, setCurrentTime] = useState<string>("");
   const router = useRouter();
   const [kioskCountdown, setKioskCountdown] = useState<number | null>(null);
@@ -48,8 +48,8 @@ export function Header() {
 
   // Effet pour démarrer le compte à rebours après l'authentification
   useEffect(() => {
-    if (status === "authenticated" && !kioskCountdown) {
-      setKioskCountdown(30);
+    if (status === "authenticated" && !session?.error && !kioskCountdown) {
+      setKioskCountdown(10);
     } else if (status !== "authenticated") {
       setKioskCountdown(null);
       if (timerRef.current) {
@@ -57,7 +57,7 @@ export function Header() {
         timerRef.current = null;
       }
     }
-  }, [status, kioskCountdown]);
+  }, [status, session?.error, kioskCountdown]);
 
   // Effet pour gérer le compte à rebours
   useEffect(() => {
@@ -67,7 +67,6 @@ export function Header() {
           setKioskCountdown(kioskCountdown - 1);
         }, 1000);
       } else {
-        // Rediriger vers le mode kiosque quand le compte à rebours atteint 0
         router.push("/kiosk");
       }
     }
@@ -92,21 +91,7 @@ export function Header() {
   const handleSignOut = async () => {
     try {
       setIsSigningOut(true);
-
-      toast({
-        title: "Déconnexion en cours...",
-        description: "Veuillez patienter",
-      });
-
-      await signOut({
-        callbackUrl: "/",
-        redirect: true,
-      });
-
-      toast({
-        title: "Déconnexion réussie",
-        description: "Vous avez été déconnecté avec succès",
-      });
+      await signOut({ callbackUrl: "/" });
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
       toast({
@@ -117,6 +102,11 @@ export function Header() {
     } finally {
       setIsSigningOut(false);
     }
+  };
+
+  // Fonction pour forcer la reconnexion
+  const handleReconnect = () => {
+    signIn("azure-ad");
   };
 
   return (
@@ -136,7 +126,26 @@ export function Header() {
           <div className="flex items-center gap-4">
             {status === "authenticated" ? (
               <div className="flex items-center gap-4">
-                {kioskCountdown !== null && (
+                {/* Afficher une erreur si le token a expiré */}
+                {session?.error === "RefreshAccessTokenError" && (
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm text-orange-600 dark:text-orange-400">
+                      Session expirée
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleReconnect}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Reconnecter
+                    </Button>
+                  </div>
+                )}
+
+                {/* Compte à rebours pour le mode kiosque */}
+                {kioskCountdown !== null && !session?.error && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">
                       Mode kiosque dans {kioskCountdown}s
@@ -150,77 +159,71 @@ export function Header() {
                     </Button>
                   </div>
                 )}
+
                 <Button variant="outline" size="sm" asChild>
                   <Link href="/kiosk">
                     <Monitor className="mr-2 h-4 w-4" />
                     Mode Kiosque
                   </Link>
                 </Button>
+
+                {/* Statut de la session */}
                 <div className="text-sm">
-                  <span className="text-green-600 dark:text-green-400 font-medium">
+                  <span
+                    className={`${
+                      session?.error
+                        ? "text-orange-500"
+                        : "text-green-600 dark:text-green-400"
+                    } font-medium`}
+                  >
                     ●
-                  </span>{" "}
-                  Session permanente
-                  {session?.user?.name && (
-                    <span className="ml-2 font-medium">
-                      {session.user.name}
-                    </span>
-                  )}
+                  </span>
+                  <span className="ml-2">
+                    {session?.error ? "Session expirée" : "Connecté"}
+                    {session?.user?.name && (
+                      <span className="ml-2 font-medium">
+                        {session.user.name}
+                      </span>
+                    )}
+                  </span>
                 </div>
 
-                {/* Bouton de déconnexion avec confirmation */}
-                {canSignOut(session) && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={isSigningOut}
+                {/* Bouton de déconnexion */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={isSigningOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      {isSigningOut ? "Déconnexion..." : "Se déconnecter"}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-orange-500" />
+                        Confirmer la déconnexion
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez
+                        vous reconnecter pour accéder aux données Microsoft
+                        Graph.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleSignOut}
+                        className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
                       >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        {isSigningOut ? "Déconnexion..." : "Se déconnecter"}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                          <AlertTriangle className="h-5 w-5 text-orange-500" />
-                          Confirmer la déconnexion
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="space-y-2">
-                          <p>Êtes-vous sûr de vouloir vous déconnecter ?</p>
-                          <p className="text-sm text-muted-foreground">
-                            Votre session permanente sera interrompue et vous
-                            devrez vous reconnecter manuellement pour accéder à
-                            l'application.
-                          </p>
-                          <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-md border border-orange-200 dark:border-orange-800">
-                            <p className="text-sm text-orange-800 dark:text-orange-200">
-                              <strong>Note :</strong> Cette action est
-                              recommandée uniquement si vous utilisez un
-                              ordinateur partagé ou si vous souhaitez changer de
-                              compte utilisateur.
-                            </p>
-                          </div>
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleSignOut}
-                          className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-                        >
-                          Oui, me déconnecter
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
+                        Oui, me déconnecter
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             ) : (
-              <Button onClick={() => signIn()} size="sm">
+              <Button onClick={() => signIn("azure-ad")} size="sm">
                 <LogIn className="mr-2 h-4 w-4" />
-                Connexion
+                Connexion Microsoft
               </Button>
             )}
             <ModeToggle />

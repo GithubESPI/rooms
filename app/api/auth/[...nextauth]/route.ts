@@ -1,19 +1,23 @@
 import NextAuth from "next-auth";
-import type { NextAuthOptions } from "next-auth";
 import AzureADProvider from "next-auth/providers/azure-ad";
+import type { JWT } from "next-auth/jwt";
+import type { Session } from "next-auth";
+import type { AuthOptions } from "next-auth";
+import type { User, Account, Profile } from "next-auth";
+import type { AdapterUser } from "next-auth/adapters";
 
-// Définir une interface pour le profil Azure AD
-interface AzureADProfile {
+// Interface pour le profil Azure AD
+interface AzureADProfile extends Profile {
   oid?: string;
   sub?: string;
   email?: string;
   name?: string;
   preferred_username?: string;
   tid?: string;
-  [key: string]: any; // Pour les autres propriétés potentielles
+  [key: string]: any;
 }
 
-export const authOptions: NextAuthOptions = {
+export const authOptions: AuthOptions = {
   providers: [
     AzureADProvider({
       clientId: process.env.MICROSOFT_CLIENT_ID!,
@@ -28,22 +32,30 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, account, profile, trigger }) {
-      // Si c'est une déconnexion manuelle marquée, ne pas rafraîchir le token
-      if (token.isManualSignOut) {
-        return token;
-      }
+    async jwt({
+      token,
+      user,
+      account,
+      profile,
+      trigger,
+    }: {
+      token: JWT;
+      user?: User | AdapterUser;
+      account: Account | null;
+      profile?: Profile;
+      trigger?: "signIn" | "signUp" | "update";
+    }) {
+      // Connexion initiale - stocker les tokens
+      if (account && account.access_token) {
+        console.log("Nouvelle connexion - stockage des tokens");
 
-      // Stocker les informations d'authentification de manière permanente
-      if (account) {
-        console.log(
-          "Nouvelle connexion - stockage des tokens pour session permanente"
-        );
-
-        // Stocker le token d'accès et le refresh token
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
-        token.expiresAt = account.expires_at;
+
+        // Vérifier que expires_in est un nombre avant de l'utiliser
+        const expiresIn =
+          typeof account.expires_in === "number" ? account.expires_in : 3600;
+        token.expiresAt = Date.now() + expiresIn * 1000;
 
         // Stocker les informations utilisateur
         if (profile) {
@@ -51,116 +63,113 @@ export const authOptions: NextAuthOptions = {
           token.userId = azureProfile.oid || azureProfile.sub || "";
           token.email = azureProfile.email;
           token.name = azureProfile.name;
-
-          console.log("Profil utilisateur pour session permanente:", {
-            userId: token.userId,
-            email: token.email,
-            name: token.name,
-          });
         }
 
-        // Marquer le token comme permanent
-        token.isPermanent = true;
-        token.isManualSignOut = false;
-        token.sessionCreatedAt = Date.now();
-        console.log("Session permanente établie pour:", token.email);
+        console.log(
+          "Tokens stockés avec succès, expiration:",
+          new Date(token.expiresAt)
+        );
+        return token;
       }
 
-      // Si c'est une session permanente et pas une déconnexion manuelle
-      if (token.isPermanent && token.refreshToken && !token.isManualSignOut) {
-        // Vérifier si le token d'accès a expiré ou va expirer dans les 10 prochaines minutes
-        const shouldRefresh =
-          !token.expiresAt ||
-          Date.now() > (token.expiresAt as number) * 1000 - 10 * 60 * 1000;
+      // Vérifier si le token d'accès a expiré (avec marge de 5 minutes)
+      const expiresAt =
+        typeof token.expiresAt === "number" ? token.expiresAt : 0;
+      const shouldRefresh =
+        expiresAt > 0 && Date.now() >= expiresAt - 5 * 60 * 1000;
 
-        if (shouldRefresh) {
-          try {
-            console.log(
-              "Rafraîchissement automatique du token pour session permanente..."
-            );
+      if (!shouldRefresh) {
+        return token;
+      }
 
-            const response = await fetch(
-              "https://login.microsoftonline.com/common/oauth2/v2.0/token",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: new URLSearchParams({
-                  client_id: process.env.MICROSOFT_CLIENT_ID!,
-                  client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
-                  grant_type: "refresh_token",
-                  refresh_token: token.refreshToken as string,
-                  scope:
-                    "openid profile email User.Read Calendars.Read Place.Read.All offline_access",
-                }),
-              }
-            );
+      // Rafraîchir le token d'accès
+      console.log("Token expiré, tentative de rafraîchissement...");
 
-            if (response.ok) {
-              const refreshedTokens = await response.json();
-              console.log(
-                "Token rafraîchi avec succès - session permanente maintenue"
-              );
-
-              return {
-                ...token,
-                accessToken: refreshedTokens.access_token,
-                refreshToken:
-                  refreshedTokens.refresh_token ?? token.refreshToken,
-                expiresAt: Math.floor(
-                  Date.now() / 1000 + refreshedTokens.expires_in
-                ),
-                isPermanent: true, // Maintenir le statut permanent
-                isManualSignOut: false,
-                lastRefresh: Date.now(),
-              };
-            } else {
-              console.warn(
-                "Échec du rafraîchissement, mais session permanente maintenue:",
-                response.status
-              );
-              // Même en cas d'échec, on garde la session active pour une session permanente
-            }
-          } catch (error) {
-            console.warn(
-              "Erreur lors du rafraîchissement, mais session permanente maintenue:",
-              error
-            );
-            // Même en cas d'erreur, on garde la session active pour une session permanente
+      try {
+        const response = await fetch(
+          `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID}/oauth2/v2.0/token`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              client_id: process.env.MICROSOFT_CLIENT_ID!,
+              client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+              grant_type: "refresh_token",
+              refresh_token: token.refreshToken as string,
+              scope:
+                "openid profile email User.Read Calendars.Read Place.Read.All offline_access",
+            }),
           }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Erreur lors du rafraîchissement:", errorData);
+          throw new Error(
+            `HTTP ${response.status}: ${
+              errorData.error_description || errorData.error
+            }`
+          );
         }
-      }
 
-      // Toujours retourner le token pour maintenir la session permanente (sauf si déconnexion manuelle)
-      return token;
+        const refreshedTokens = await response.json();
+        console.log("Token rafraîchi avec succès");
+
+        // Vérifier que expires_in est un nombre
+        const newExpiresIn =
+          typeof refreshedTokens.expires_in === "number"
+            ? refreshedTokens.expires_in
+            : 3600;
+
+        return {
+          ...token,
+          accessToken: refreshedTokens.access_token,
+          refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
+          expiresAt: Date.now() + newExpiresIn * 1000,
+          error: undefined,
+        };
+      } catch (error) {
+        console.error("Impossible de rafraîchir le token:", error);
+
+        return {
+          ...token,
+          error: "RefreshAccessTokenError",
+        };
+      }
     },
-    async session({ session, token }: any) {
-      // Si c'est une déconnexion manuelle, retourner une session vide
-      if (token.isManualSignOut) {
-        return null;
-      }
 
-      // Toujours transmettre les informations de session
+    async session({ session, token }: { session: Session; token: JWT }) {
+      // Transmettre les informations à la session
       session.accessToken = token.accessToken;
-      session.refreshToken = token.refreshToken;
-      session.isPermanent = token.isPermanent;
-      session.isManualSignOut = token.isManualSignOut;
+      session.error = token.error;
 
-      // Ajouter les informations utilisateur
       if (session.user) {
-        session.user.id = token.userId;
-        session.user.email = token.email;
-        session.user.name = token.name;
+        session.user.id = token.userId as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
       }
 
       return session;
     },
-    async signIn({ user, account, profile, email, credentials }) {
+
+    async signIn({
+      user,
+      account,
+      profile,
+      email,
+      credentials,
+    }: {
+      user: User | AdapterUser;
+      account: Account | null;
+      profile?: Profile;
+      email?: { verificationRequest?: boolean };
+      credentials?: Record<string, any>;
+    }) {
       console.log("Tentative de connexion:", {
         user: user?.email,
         provider: account?.provider,
-        type: account?.type,
       });
 
       // Vérifier que nous avons les informations nécessaires
@@ -172,67 +181,32 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
   },
-  // Configuration de session pour ne jamais expirer automatiquement
+
+  // Configuration de session
   session: {
-    strategy: "jwt",
-    maxAge: 365 * 24 * 60 * 60 * 10, // 10 ans (pratiquement permanent)
-    updateAge: 0, // Ne jamais forcer la mise à jour automatique
+    strategy: "jwt" as const,
+    maxAge: 30 * 24 * 60 * 60, // 30 jours
+    updateAge: 24 * 60 * 60, // Mise à jour quotidienne
   },
-  // Configuration des cookies pour une durée de vie maximale
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 365 * 24 * 60 * 60 * 10, // 10 ans
-      },
-    },
-    callbackUrl: {
-      name: `next-auth.callback-url`,
-      options: {
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 365 * 24 * 60 * 60 * 10, // 10 ans
-      },
-    },
-    csrfToken: {
-      name: `next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 365 * 24 * 60 * 60 * 10, // 10 ans
-      },
-    },
-  },
-  // Activer le débogage pour diagnostiquer le problème
-  debug: process.env.NODE_ENV === "development",
+
   // Pages personnalisées
   pages: {
     signIn: "/auth/signin",
     error: "/auth/error",
   },
-  // Événements pour surveiller la session
+
+  // Événements pour le débogage
   events: {
-    async signIn({ user, account, profile }) {
-      console.log(`Session permanente créée pour: ${user.email}`);
+    async signIn(message) {
+      console.log(`Connexion réussie pour: ${message.user.email}`);
     },
-    async signOut({ token }) {
-      console.log(`Déconnexion effectuée pour: ${token?.email}`);
-    },
-    async session({ session, token }) {
-      // Log périodique pour confirmer que la session est active
-      if (Math.random() < 0.01) {
-        // 1% de chance de logger pour éviter le spam
-        console.log(`Session permanente active pour: ${session.user?.email}`);
-      }
+    async signOut(message) {
+      console.log(`Déconnexion pour: ${message.token?.email}`);
     },
   },
+
+  // Activer le débogage en développement
+  debug: process.env.NODE_ENV === "development",
 };
 
 const handler = NextAuth(authOptions);

@@ -3,19 +3,13 @@ import "next-auth";
 declare module "next-auth" {
   interface Session {
     accessToken?: string;
-    refreshToken?: string;
-    isPermanent?: boolean;
-    isManualSignOut?: boolean;
-    signOut?: boolean;
-  }
-
-  interface JWT {
-    accessToken?: string;
-    refreshToken?: string;
-    isPermanent?: boolean;
-    isManualSignOut?: boolean;
-    userId?: string;
-    expiresAt?: number;
+    error?: string;
+    user: {
+      id?: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+    };
   }
 }
 
@@ -23,9 +17,10 @@ declare module "next-auth/jwt" {
   interface JWT {
     accessToken?: string;
     refreshToken?: string;
-    isPermanent?: boolean;
-    isManualSignOut?: boolean;
-    userId?: string;
     expiresAt?: number;
+    userId?: string;
+    email?: string | null;
+    name?: string | null;
+    error?: string;
   }
 }

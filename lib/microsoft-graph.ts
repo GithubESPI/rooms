@@ -15,7 +15,7 @@ export interface GraphError {
 export type GraphResponse<T> = T | { error: GraphError };
 
 /**
- * Fonction utilitaire pour appeler Microsoft Graph API avec gestion permanente des tokens
+ * Fonction utilitaire pour appeler Microsoft Graph API avec gestion automatique des tokens
  */
 export async function callMicrosoftGraph<T>(
   endpoint: string,
@@ -24,14 +24,24 @@ export async function callMicrosoftGraph<T>(
   const session = await getServerSession(authOptions);
 
   if (!session?.accessToken) {
-    console.warn(
-      "Aucun token d'accès disponible - session peut-être corrompue"
-    );
+    console.warn("Aucun token d'accès disponible");
     return {
       error: {
         status: 401,
-        message: "Session non disponible - veuillez actualiser la page",
+        message: "Authentification requise - veuillez vous connecter",
         code: "NoSession",
+      },
+    };
+  }
+
+  // Vérifier s'il y a une erreur de rafraîchissement
+  if (session.error === "RefreshAccessTokenError") {
+    console.warn("Erreur de rafraîchissement de token détectée");
+    return {
+      error: {
+        status: 401,
+        message: "Session expirée - veuillez vous reconnecter",
+        code: "TokenRefreshError",
       },
     };
   }
@@ -52,56 +62,8 @@ export async function callMicrosoftGraph<T>(
       },
     });
 
-    // Si le token a expiré (401), essayer de forcer un rafraîchissement
-    if (response.status === 401) {
-      console.log("Token potentiellement expiré, tentative de récupération...");
-
-      // Attendre un peu et réessayer (le callback JWT devrait rafraîchir automatiquement)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const refreshedSession = await getServerSession(authOptions);
-
-      if (refreshedSession?.accessToken) {
-        console.log("Nouvelle tentative avec session rafraîchie...");
-
-        const retryResponse = await fetch(url, {
-          ...options,
-          headers: {
-            Authorization: `Bearer ${refreshedSession.accessToken}`,
-            "Content-Type": "application/json",
-            ...options.headers,
-          },
-        });
-
-        if (retryResponse.ok) {
-          const data = await retryResponse.json();
-          console.log(`Succès après rafraîchissement (${url})`);
-          return data;
-        } else {
-          console.warn(
-            `Échec même après rafraîchissement: ${retryResponse.status}`
-          );
-        }
-      }
-    }
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-
-      // Pour les erreurs 401, ne pas considérer cela comme fatal
-      if (response.status === 401) {
-        console.warn(
-          "Erreur d'authentification - session maintenue mais API inaccessible temporairement"
-        );
-        return {
-          error: {
-            status: response.status,
-            message:
-              "Authentification temporairement indisponible - les données seront actualisées automatiquement",
-            code: "TemporaryAuthError",
-          },
-        };
-      }
 
       console.error("Microsoft Graph API error:", {
         status: response.status,
@@ -120,7 +82,7 @@ export async function callMicrosoftGraph<T>(
     }
 
     const data = await response.json();
-    console.log(`Réponse de Microsoft Graph API (${url}):`, {
+    console.log(`Succès Microsoft Graph API (${url}):`, {
       status: response.status,
       dataSize: JSON.stringify(data).length,
       hasValue: "value" in data,
@@ -158,7 +120,7 @@ export function isGraphError<T>(
 }
 
 /**
- * Récupère toutes les pages d'une réponse paginée avec gestion d'erreur gracieuse
+ * Récupère toutes les pages d'une réponse paginée avec gestion d'erreur
  */
 export async function getAllPages<T>(
   initialUrl: string,
@@ -167,9 +129,9 @@ export async function getAllPages<T>(
   let url = initialUrl;
   let allItems: T[] = [];
   let retryCount = 0;
-  const maxRetries = 3;
+  const maxRetries = 2;
 
-  while (url && retryCount < maxRetries) {
+  while (url && retryCount <= maxRetries) {
     console.log(
       `Récupération de la page: ${url} (tentative ${retryCount + 1})`
     );
@@ -179,26 +141,27 @@ export async function getAllPages<T>(
       options
     );
 
-    // Vérifier s'il y a une erreur
     if (isGraphError(response)) {
       console.warn(`Error fetching pages from ${url}:`, response.error);
 
-      // Si c'est une erreur temporaire, réessayer
-      if (
-        response.error.code === "TemporaryAuthError" &&
-        retryCount < maxRetries - 1
-      ) {
+      // Si c'est une erreur d'authentification, ne pas réessayer
+      if (response.error.status === 401) {
+        break;
+      }
+
+      // Pour les autres erreurs, réessayer
+      if (retryCount < maxRetries) {
         retryCount++;
-        await new Promise((resolve) => setTimeout(resolve, 2000 * retryCount)); // Délai progressif
+        await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount));
         continue;
       }
 
-      return allItems; // Retourner les éléments déjà récupérés
+      break;
     }
 
     allItems = [...allItems, ...response.value];
     url = response["@odata.nextLink"] || "";
-    retryCount = 0; // Reset retry count on success
+    retryCount = 0;
 
     console.log(
       `${response.value.length} éléments récupérés, ${
