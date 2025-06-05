@@ -33,14 +33,14 @@ export function ManualSignOut({
 
       // Effectuer la déconnexion
       await signOut({
-        callbackUrl: "/auth/signin",
+        callbackUrl: "/",
         redirect: true,
       });
     } catch (error) {
       console.error("Erreur lors de la déconnexion manuelle:", error);
       // Forcer la déconnexion même en cas d'erreur
       await signOut({
-        callbackUrl: "/auth/signin",
+        callbackUrl: "/",
         redirect: true,
       });
     }

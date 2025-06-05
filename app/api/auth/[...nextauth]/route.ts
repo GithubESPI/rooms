@@ -186,8 +186,8 @@ export const authOptions: AuthOptions = {
 
   // Pages personnalisées
   pages: {
-    signIn: "/auth/signin",
     error: "/auth/error",
+    signOut: "/",
   },
 
   // Événements pour le débogage

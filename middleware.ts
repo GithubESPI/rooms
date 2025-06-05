@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
   });
 
   // Chemins qui ne nécessitent pas d'authentification
-  const publicPaths = ["/auth/signin", "/auth/error", "/api/auth"];
+  const publicPaths = ["/", "/auth/error", "/api/auth", "/kiosk"];
 
   // Vérifier si le chemin actuel est public
   const isPublicPath = publicPaths.some((path) =>
@@ -19,14 +19,6 @@ export async function middleware(request: NextRequest) {
 
   // Si l'utilisateur n'est pas authentifié et tente d'accéder à une route protégée
   if (!token && !isPublicPath) {
-    // Rediriger vers la page de connexion
-    const url = new URL("/auth/signin", request.url);
-    url.searchParams.set("callbackUrl", request.nextUrl.pathname);
-    return NextResponse.redirect(url);
-  }
-
-  // Si l'utilisateur est authentifié et tente d'accéder à la page de connexion
-  if (token && request.nextUrl.pathname.startsWith("/auth/signin")) {
     // Rediriger vers la page d'accueil
     return NextResponse.redirect(new URL("/", request.url));
   }

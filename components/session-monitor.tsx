@@ -24,9 +24,9 @@ export function SessionMonitor() {
       try {
         // Vérifier si la session a une erreur
         if (session?.error === "RefreshAccessTokenError") {
-          console.log("Session error detected, redirecting to sign in");
+          console.log("Session error detected, redirecting to home page");
           toast.error("Votre session a expiré. Veuillez vous reconnecter.");
-          router.push("/auth/signin");
+          router.push("/");
           return;
         }
 

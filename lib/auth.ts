@@ -23,7 +23,7 @@ export const signOut = async (options?: {
   try {
     // Marquer la session pour déconnexion via update
     await nextAuthSignOut({
-      callbackUrl: options?.callbackUrl || "/auth/signin",
+      callbackUrl: options?.callbackUrl || "/",
       redirect: options?.redirect !== false,
     });
 

@@ -35,6 +35,7 @@ import {
   isMeetingActive,
   getTimeUntilStart,
 } from "@/lib/date-utils";
+import { signIn } from "next-auth/react";
 
 // Liste des noms de salles à afficher
 const ALLOWED_ROOM_NAMES = [
@@ -277,17 +278,15 @@ export function WelcomePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
-            <form
-              action="/api/auth/signin/azure-ad"
-              method="POST"
-              className="w-full"
+            <Button
+              onClick={() => signIn("azure-ad", { callbackUrl: "/" })}
+              size="lg"
+              className="w-full h-12 text-lg"
             >
-              <Button type="submit" size="lg" className="w-full h-12 text-lg">
-                <LogIn className="mr-2 h-4 w-4" />
-                Se connecter avec Microsoft
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </form>
+              <LogIn className="mr-2 h-4 w-4" />
+              Se connecter avec Microsoft
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
           </CardContent>
         </Card>
 
