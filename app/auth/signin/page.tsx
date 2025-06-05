@@ -12,10 +12,9 @@ import {
 } from "@/components/ui/card";
 import { LogIn, Building2, Calendar, Users } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
-import Image from "next/image";
+import { useState, Suspense } from "react";
 
-export default function SignIn() {
+function SignInForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const [isLoading, setIsLoading] = useState(false);
@@ -39,7 +38,14 @@ export default function SignIn() {
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
       {/* Background avec gradient animé */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-slate-900 to-purple-900">
-        <div className='absolute inset-0 bg-[url(&apos;data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fillRule="evenodd"%3E%3Cg fill="%23ffffff" fillOpacity="0.03"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E&apos;)] opacity-20'></div>
+        <div className="absolute inset-0 opacity-20">
+          <div
+            className="absolute inset-0 bg-repeat"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fillRule='evenodd'%3E%3Cg fill='%23ffffff' fillOpacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }}
+          />
+        </div>
       </div>
 
       {/* Éléments décoratifs flottants */}
@@ -65,8 +71,7 @@ export default function SignIn() {
             </CardTitle>
             <CardDescription className="text-slate-600 leading-relaxed">
               Connectez-vous avec votre compte Microsoft pour accéder à la
-              plateforme de gestion des salles de réunion du Groupe ESPI Paris
-              Siège.
+              plateforme de gestion des salles de réunion du Groupe ESPI.
             </CardDescription>
           </CardHeader>
 
@@ -142,7 +147,7 @@ export default function SignIn() {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-blue-200 text-sm">
-            © {new Date().getFullYear()} Groupe ESPI - Tous droits réservés
+            © 2024 Groupe ESPI - Tous droits réservés
           </p>
           <p className="text-blue-300 text-xs mt-1">
             École Supérieure des Professions Immobilières
@@ -150,5 +155,27 @@ export default function SignIn() {
         </div>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-slate-900 to-purple-900">
+      <div className="text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl mb-4 shadow-lg">
+          <Building2 className="w-8 h-8 text-white" />
+        </div>
+        <h1 className="text-2xl font-bold text-white mb-2">Chargement...</h1>
+        <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div>
+      </div>
+    </div>
+  );
+}
+
+export default function SignIn() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <SignInForm />
+    </Suspense>
   );
 }
