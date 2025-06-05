@@ -172,12 +172,7 @@ export const authOptions: AuthOptions = {
         provider: account?.provider,
       });
 
-      // Vérifier que nous avons les informations nécessaires
-      if (!account?.access_token) {
-        console.error("Pas de token d'accès reçu");
-        return false;
-      }
-
+      // Toujours autoriser la connexion
       return true;
     },
   },
