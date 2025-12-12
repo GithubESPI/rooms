@@ -61,6 +61,7 @@ interface RoomWithStatus extends MeetingRoom {
   meetings: Meeting[];
   loading: boolean;
   error?: string;
+  isExample?: boolean;
 }
 
 const features = [
@@ -171,6 +172,7 @@ export function WelcomePage() {
             nextMeeting,
             meetings: roomData.meetings,
             loading: false,
+            isExample: roomData.isExample || false,
           };
         }
       );
@@ -702,6 +704,55 @@ export function WelcomePage() {
             >
               État actuel de vos espaces de travail
             </motion.p>
+            
+            {/* Indicateur pour les données d'exemple */}
+            {rooms.length > 0 && rooms[0]?.isExample && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 3.4, type: "spring", stiffness: 200 }}
+                className="flex items-center justify-center gap-3"
+              >
+                <motion.div
+                  animate={{
+                    boxShadow: [
+                      "0 0 20px rgba(251, 191, 36, 0.3)",
+                      "0 0 40px rgba(251, 191, 36, 0.5)",
+                      "0 0 20px rgba(251, 191, 36, 0.3)",
+                    ],
+                  }}
+                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+                  className="px-6 py-3 bg-gradient-to-r from-amber-100 via-yellow-100 to-amber-100 dark:from-amber-900/30 dark:via-yellow-900/30 dark:to-amber-900/30 rounded-full border-2 border-amber-300 dark:border-amber-700 shadow-lg backdrop-blur-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      animate={{ rotate: [0, 10, -10, 0] }}
+                      transition={{
+                        duration: 2,
+                        repeat: Number.POSITIVE_INFINITY,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    </motion.div>
+                    <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                      Données d'exemple - Connectez-vous pour voir les vraies données
+                    </span>
+                    <motion.div
+                      animate={{ rotate: [0, -10, 10, 0] }}
+                      transition={{
+                        duration: 2,
+                        repeat: Number.POSITIVE_INFINITY,
+                        ease: "easeInOut",
+                        delay: 0.5,
+                      }}
+                    >
+                      <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    </motion.div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
           </div>
 
           <AnimatePresence mode="wait">
@@ -818,16 +869,46 @@ export function WelcomePage() {
                     whileHover={{ y: -10, scale: 1.02 }}
                   >
                     <Card
-                      className={`h-full transition-all duration-500 hover:shadow-2xl bg-white/80 backdrop-blur-xl border-2 group ${
+                      className={`h-full transition-all duration-500 hover:shadow-2xl bg-white/80 backdrop-blur-xl border-2 group relative overflow-hidden ${
                         room.isOccupied
                           ? "border-red-200 hover:border-red-400"
                           : "border-green-200 hover:border-green-400"
-                      }`}
+                      } ${room.isExample ? "border-amber-300/50" : ""}`}
                     >
+                      {/* Badge d'exemple avec animation */}
+                      {room.isExample && (
+                        <motion.div
+                          initial={{ opacity: 0, x: -50 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 3.6 + index * 0.1 }}
+                          className="absolute top-3 right-3 z-10"
+                        >
+                          <motion.div
+                            animate={{
+                              scale: [1, 1.05, 1],
+                              rotate: [0, 5, -5, 0],
+                            }}
+                            transition={{
+                              duration: 2,
+                              repeat: Number.POSITIVE_INFINITY,
+                              ease: "easeInOut",
+                            }}
+                            className="px-3 py-1 bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full shadow-lg border-2 border-amber-500"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <Sparkles className="h-3.5 w-3.5 text-white" />
+                              <span className="text-xs font-bold text-white">
+                                EXEMPLE
+                              </span>
+                            </div>
+                          </motion.div>
+                        </motion.div>
+                      )}
+                      
                       <CardHeader className="pb-4">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <CardTitle className="text-lg font-bold truncate text-[#1B4B8F] group-hover:text-[#0D2B5C] transition-colors duration-300">
+                            <CardTitle className="text-lg font-bold truncate text-[#1B4B8F] group-hover:text-[#0D2B5C] transition-colors duration-300 pr-20">
                               {room.name}
                             </CardTitle>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
